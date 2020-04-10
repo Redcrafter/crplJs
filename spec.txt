@@ -1,0 +1,33 @@
+literal := number | string | ID
+
+statement := return | for | while | doWhile | if | scope | varDecl | functionDecl | expr
+
+return  := 'return' expr?;
+for 	:= 'for' '(' expr? ';' expr? ';' expr? ')' statement
+while	:= 'while' '(' expr ')' statement
+doWhile	:= 'do' statement 'while' '(' expr ')'
+if		:= 'if' '(' expr ')' statement ('else' statement)?
+scope   := '{' statement* '}'
+varDecl := ('let' | 'var' | 'const') ID ('=' expr)?
+
+functionDecl := 'function' ID '(' (type ID (',' type ID)*)? ')' statement
+
+expr    := assign
+assign 	:= select (('=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=') assign)?
+select  := lor ('?' select ':' select)?
+lor 	:= land ('||' lor)?
+land	:= nullCoal ('&&' land)?
+nullCoal:= or ('??' nullCoal)?
+or		:= xor ('|' or)?
+xor		:= and ('^' xor)?
+and		:= eq ('&' and)?
+eq		:= comp (('==' | '!=') eq)?
+comp	:= shift (('<' | '<=' | '>=' | '>') comp)?
+shift	:= add (('<<' | '>>') shift)?
+add		:= mul (('+' | '-') add)?
+mul     := preFix (('*' | '/' | '%') mul)?
+preFix  := ('++' | '--' | '+' | '-' | '!' | '~')* postFix
+postFix := atom ('++' | '--' | call)*
+atom    := INT | FLOAT | BOOL | STRING | ID | '(' expr ')'
+
+call := '(' (expr (',' expr)*)? ')'
