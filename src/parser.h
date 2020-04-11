@@ -94,15 +94,15 @@ struct Scope : Statement {
     void visit(Converter& converter, bool discard) const;
 };
 struct LetStatement : Statement {
-    TokenType Type;
+    Tokentype Type;
     std::string Name;
     Expression* Value = nullptr;
 
-    LetStatement(const SourceLocation location, TokenType type, std::string name, Expression* value) : Statement(location), Type(type), Name(name), Value(value) {}
+    LetStatement(const SourceLocation location, Tokentype type, std::string name, Expression* value) : Statement(location), Type(type), Name(name), Value(value) {}
     ~LetStatement() { delete Value; }
 
     std::string getName() const {
-        if(Type == TokenType::Const) {
+        if(Type == Tokentype::Const) {
             return Name;
         }
         return Name + "_" + std::to_string(Location.line) + "_" + std::to_string(Location.column);
@@ -144,29 +144,29 @@ struct SelectExpression : Expression {
     void visit(Converter& converter, bool discard) const;
 };
 struct PreExpression : Expression {
-    TokenType Type;
+    Tokentype Type;
     Expression* Left;
 
-    PreExpression(const SourceLocation location, TokenType type, Expression* left) : Expression(location), Type(type), Left(left) {}
+    PreExpression(const SourceLocation location, Tokentype type, Expression* left) : Expression(location), Type(type), Left(left) {}
     ~PreExpression() { delete Left; }
 
     void visit(Converter& converter, bool discard) const;
 };
 struct PostExpression : Expression {
-    TokenType Type;
+    Tokentype Type;
     Expression* Right;
 
-    PostExpression(const SourceLocation location, TokenType type, Expression* right) : Expression(location), Type(type), Right(right) {}
+    PostExpression(const SourceLocation location, Tokentype type, Expression* right) : Expression(location), Type(type), Right(right) {}
     ~PostExpression() { delete Right; }
 
     void visit(Converter& converter, bool discard) const;
 };
 struct Operation : Expression {
-    TokenType Type;
+    Tokentype Type;
     Expression* Left;
     Expression* Right;
 
-    Operation(const SourceLocation location, TokenType type, Expression* left, Expression* right) : Expression(location), Type(type), Left(left), Right(right) {}
+    Operation(const SourceLocation location, Tokentype type, Expression* left, Expression* right) : Expression(location), Type(type), Left(left), Right(right) {}
 
     void visit(Converter& converter, bool discard) const;
 };
@@ -228,7 +228,7 @@ class Parser {
 
    private:
     void acceptIt();
-    std::string accept(TokenType type);
+    std::string accept(Tokentype type);
 
     Statement* ParseStatement();
 

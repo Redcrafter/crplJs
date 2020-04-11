@@ -3,12 +3,17 @@
 
 #include "fs.h"
 #include "logger.h"
+#include "colors.h"
 
 #include "tokenizer.h"
 #include "parser.h"
 #include "converter.h"
 
 int main(int argc, char** argv) {
+	#ifdef _WIN32
+	LoadDefaultColor();
+	#endif
+
 	if(argc == 1) {
 		LogGlobalError(FatalError, "no input files");
 	} else {
@@ -28,7 +33,7 @@ int main(int argc, char** argv) {
 			auto res = tokenize(path);
 			
 			std::deque<Token> queue(res.begin(), res.end());
-			queue.push_back(Token{ TokenType::Eof, "<EOF>" });
+			queue.push_back(Token{ Tokentype::Eof, "<EOF>" });
 			
 			Parser p(queue);
 			auto ast = p.Parse();

@@ -7,7 +7,7 @@
 
 /*struct test {
     const char* str;
-    TokenType type;
+    Tokentype type;
 };*/
 
 static bool isLetter(int c) {
@@ -18,81 +18,81 @@ static bool isDigit(int c) {
     return c >= '0' && c <= '9';
 }
 
-std::map<std::string, TokenType> keywords = {
-    {"true", TokenType::BoolLit},
-	{"false", TokenType::BoolLit},
-    {"let", TokenType::Let},
-    {"var", TokenType::Var},
-    {"const", TokenType::Const},
-    {"return", TokenType::Return},
-    {"for", TokenType::Return},
-    {"do", TokenType::Do},
-    {"while", TokenType::While},
-    {"if", TokenType::If},
-    {"else", TokenType::Else},
-    {"switch", TokenType::Switch},
-    {"case", TokenType::Case},
-    {"default", TokenType::Default},
-    {"function", TokenType::Function},
-    {"break", TokenType::Break},
-    {"continue", TokenType::Continue},
+std::map<std::string, Tokentype> keywords = {
+    {"true", Tokentype::BoolLit},
+	{"false", Tokentype::BoolLit},
+    {"let", Tokentype::Let},
+    {"var", Tokentype::Var},
+    {"const", Tokentype::Const},
+    {"return", Tokentype::Return},
+    {"for", Tokentype::Return},
+    {"do", Tokentype::Do},
+    {"while", Tokentype::While},
+    {"if", Tokentype::If},
+    {"else", Tokentype::Else},
+    {"switch", Tokentype::Switch},
+    {"case", Tokentype::Case},
+    {"default", Tokentype::Default},
+    {"function", Tokentype::Function},
+    {"break", Tokentype::Break},
+    {"continue", Tokentype::Continue},
 };
 
 // TODO: use tree matching
 /* test all[] = {
-    {"(", TokenType::LParen},
-    {")", TokenType::LParen},
-    {"{", TokenType::LParen},
-    {"}", TokenType::LParen},
+    {"(", Tokentype::LParen},
+    {")", Tokentype::LParen},
+    {"{", Tokentype::LParen},
+    {"}", Tokentype::LParen},
 
-    {"<", TokenType::LParen},
-    {"<=", TokenType::LParen},
-    {"==", TokenType::LParen},
-    {"!=", TokenType::LParen},
-    {">=", TokenType::LParen},
-    {">", TokenType::LParen},
+    {"<", Tokentype::LParen},
+    {"<=", Tokentype::LParen},
+    {"==", Tokentype::LParen},
+    {"!=", Tokentype::LParen},
+    {">=", Tokentype::LParen},
+    {">", Tokentype::LParen},
 
-    {",", TokenType::LParen},
-    {":", TokenType::LParen},
-    {";", TokenType::LParen},
+    {",", Tokentype::LParen},
+    {":", Tokentype::LParen},
+    {";", Tokentype::LParen},
 
-    {"+", TokenType::LParen},
-    {"-", TokenType::LParen},
-    {"*", TokenType::LParen},
-    {"/", TokenType::LParen},
-    {"%", TokenType::LParen},
-    {">>", TokenType::LParen},
-    {"<<", TokenType::LParen},
+    {"+", Tokentype::LParen},
+    {"-", Tokentype::LParen},
+    {"*", Tokentype::LParen},
+    {"/", Tokentype::LParen},
+    {"%", Tokentype::LParen},
+    {">>", Tokentype::LParen},
+    {"<<", Tokentype::LParen},
 
-    {"++", TokenType::LParen},
-    {"--", TokenType::LParen},
+    {"++", Tokentype::LParen},
+    {"--", Tokentype::LParen},
 
-    {"=", TokenType::LParen},
-    {"+=", TokenType::LParen},
-    {"-=", TokenType::LParen},
-    {"*=", TokenType::LParen},
-    {"/=", TokenType::LParen},
-    {"%=", TokenType::LParen},
-    {"&=", TokenType::LParen},
-    {"|=", TokenType::LParen},
-    {"^=", TokenType::LParen},
-    {"<<=", TokenType::LParen},
-    {">>=", TokenType::LParen},
+    {"=", Tokentype::LParen},
+    {"+=", Tokentype::LParen},
+    {"-=", Tokentype::LParen},
+    {"*=", Tokentype::LParen},
+    {"/=", Tokentype::LParen},
+    {"%=", Tokentype::LParen},
+    {"&=", Tokentype::LParen},
+    {"|=", Tokentype::LParen},
+    {"^=", Tokentype::LParen},
+    {"<<=", Tokentype::LParen},
+    {">>=", Tokentype::LParen},
 
-    {"~", TokenType::LParen},
-    {"^", TokenType::LParen},
-    {"&", TokenType::LParen},
-    {"|", TokenType::LParen},
+    {"~", Tokentype::LParen},
+    {"^", Tokentype::LParen},
+    {"&", Tokentype::LParen},
+    {"|", Tokentype::LParen},
 
-    {"!", TokenType::LParen},
-    {"&&", TokenType::LParen},
-    {"||", TokenType::LParen},
+    {"!", Tokentype::LParen},
+    {"&&", Tokentype::LParen},
+    {"||", Tokentype::LParen},
 
-    {"?", TokenType::LParen},
-    {"??", TokenType::LParen},
+    {"?", Tokentype::LParen},
+    {"??", Tokentype::LParen},
 
-    {"//", TokenType::Comment},
-    {"/*", TokenType::MultiComment}
+    {"//", Tokentype::Comment},
+    {"/*", Tokentype::MultiComment}
 };*/
 
 std::vector<Token> tokenize(const std::string& fileName) {
@@ -122,7 +122,7 @@ std::vector<Token> tokenize(const std::string& fileName) {
     while (currentChar != EOF) {
         SourceLocation start = loc;
         spelling = "";
-        TokenType type;
+        Tokentype type;
 
         /*
             std::list<test> possible(all, all + sizeof(all) / sizeof(test));
@@ -146,9 +146,9 @@ std::vector<Token> tokenize(const std::string& fileName) {
                 }
             }
 
-            if (type == TokenType::Comment) {
+            if (type == Tokentype::Comment) {
                 continue;
-            } else if (type == TokenType::MultiComment) {
+            } else if (type == Tokentype::MultiComment) {
                 continue;
             }
         */
@@ -158,14 +158,14 @@ std::vector<Token> tokenize(const std::string& fileName) {
             case '\t':
             case '\r':
             case '\n': skip(); continue;
-            case '(': type = TokenType::LParen; take(); break;
-            case ')': type = TokenType::RParen; take(); break;
-            case '{': type = TokenType::LBrace; take(); break;
-            case '}': type = TokenType::RBrace; take(); break;
-            case ',': type = TokenType::Comma; take(); break;
-            case ':': type = TokenType::Colon; take(); break;
-            case ';': type = TokenType::Semicolon; take(); break;
-            case '~': type = TokenType::Not; take(); break;
+            case '(': type = Tokentype::LParen; take(); break;
+            case ')': type = Tokentype::RParen; take(); break;
+            case '{': type = Tokentype::LBrace; take(); break;
+            case '}': type = Tokentype::RBrace; take(); break;
+            case ',': type = Tokentype::Comma; take(); break;
+            case ':': type = Tokentype::Colon; take(); break;
+            case ';': type = Tokentype::Semicolon; take(); break;
+            case '~': type = Tokentype::Not; take(); break;
             case '.': 
                 take();
                 if(isDigit(currentChar)) {
@@ -173,66 +173,66 @@ std::vector<Token> tokenize(const std::string& fileName) {
                         take();
                     } while (isDigit(currentChar));
 
-                    type = TokenType::FloatLit;
+                    type = Tokentype::FloatLit;
                 } else {
-                    type = TokenType::Dot; take(); 
+                    type = Tokentype::Dot; take(); 
                 }
                 break;
             case '+': 
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::AddAssign;
+                    type = Tokentype::AddAssign;
                 } else if(currentChar == '+') {
                     take();
-                    type = TokenType::Inc;
+                    type = Tokentype::Inc;
                 } else {
-                    type = TokenType::Add; 
+                    type = Tokentype::Add; 
                 }
                 break;
             case '-': 
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::SubAssign;
+                    type = Tokentype::SubAssign;
                 } else if(currentChar == '+') {
                     take();
-                    type = TokenType::Dec;
+                    type = Tokentype::Dec;
                 } else {
-                    type = TokenType::Sub; 
+                    type = Tokentype::Sub; 
                 }
                 break;
             case '*': 
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::MulAssign;
+                    type = Tokentype::MulAssign;
                 } else if(currentChar == '*') {
                     take();
-                    type = TokenType::Pow;
+                    type = Tokentype::Pow;
                 } else {
-                    type = TokenType::Mul; 
+                    type = Tokentype::Mul; 
                 }
                 break;
             case '%': 
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::ModAssign;
+                    type = Tokentype::ModAssign;
                 } else {
-                    type = TokenType::Mod; 
+                    type = Tokentype::Mod; 
                 }
                 break;
             case '?':
                 take();
                 if(currentChar == '?') {
                     take();
-                    type = TokenType::NullCoal;
+                    type = Tokentype::NullCoal;
                 } else if(currentChar == '.') {
                     take();
-                    type = TokenType::OptChain;
+                    type = Tokentype::OptChain;
                 } else {
-                    type = TokenType::QMark;
+                    type = Tokentype::QMark;
                 }
                 break;
             
@@ -240,9 +240,9 @@ std::vector<Token> tokenize(const std::string& fileName) {
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::NEquals;
+                    type = Tokentype::NEquals;
                 } else {
-                    type = TokenType::LNot;
+                    type = Tokentype::LNot;
                 }
                 break;
             case '/':
@@ -269,87 +269,87 @@ std::vector<Token> tokenize(const std::string& fileName) {
                     continue;
                 } else if(currentChar == '=') {
                     take();
-                    type = TokenType::DivAssign;
+                    type = Tokentype::DivAssign;
                 } else {
-                    type = TokenType::Div;
+                    type = Tokentype::Div;
                 }
                 break;
             case '<':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::LessEq;
+                    type = Tokentype::LessEq;
                 } else if(currentChar == '<') {
                     take();
 
                     if(currentChar == '=') {
                         take();
-                        type = TokenType::LshiftAssign;
+                        type = Tokentype::LshiftAssign;
                     } else {
-                        type = TokenType::LShift;
+                        type = Tokentype::LShift;
                     }
                 } else {
-                    type = TokenType::Less;
+                    type = Tokentype::Less;
                 }
                 break;
             case '>':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::GreaterEq;
+                    type = Tokentype::GreaterEq;
                 } else if(currentChar == '>') {
                     take();
 
                     if(currentChar == '=') {
                         take();
-                        type = TokenType::RshiftAssign;
+                        type = Tokentype::RshiftAssign;
                     } else {
-                        type = TokenType::RShift;
+                        type = Tokentype::RShift;
                     }
                 } else {
-                    type = TokenType::Greater;
+                    type = Tokentype::Greater;
                 }
                 break;
             case '=':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::Equals;
+                    type = Tokentype::Equals;
                 } else {
-                    type = TokenType::Assign;
+                    type = Tokentype::Assign;
                 }
                 break;
             case '&':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::AndAssign;
+                    type = Tokentype::AndAssign;
                 } else if(currentChar == '&') {
                     take();
-                    type = TokenType::LAnd;
+                    type = Tokentype::LAnd;
                 } else {
-                    type = TokenType::And;
+                    type = Tokentype::And;
                 }
                 break;
             case '|':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::OrAssign;
+                    type = Tokentype::OrAssign;
                 } else if(currentChar == '|') {
                     take();
-                    type = TokenType::LOr;
+                    type = Tokentype::LOr;
                 } else {
-                    type = TokenType::Or;
+                    type = Tokentype::Or;
                 }
                 break;
             case '^':
                 take();
                 if(currentChar == '=') {
                     take();
-                    type = TokenType::XorAssign;
+                    type = Tokentype::XorAssign;
                 } else {
-                    type = TokenType::Xor;
+                    type = Tokentype::Xor;
                 }
                 break;
             case '"':
@@ -371,7 +371,7 @@ std::vector<Token> tokenize(const std::string& fileName) {
                         take();
                     }
                 }
-                type = TokenType::StringLit;
+                type = Tokentype::StringLit;
                 break;
             default:
                 if(isLetter(currentChar)) {
@@ -382,7 +382,7 @@ std::vector<Token> tokenize(const std::string& fileName) {
                     if(keywords.count(spelling)) {
                         type = keywords[spelling];
                     } else {
-                        type = TokenType::ID;
+                        type = Tokentype::ID;
                     }
                 } else if(isDigit(currentChar)) {
                     do {
@@ -394,9 +394,9 @@ std::vector<Token> tokenize(const std::string& fileName) {
                             take();
                         } while (isDigit(currentChar));
 
-                        type = TokenType::FloatLit;
+                        type = Tokentype::FloatLit;
                     } else {
-                        type = TokenType::IntLit;
+                        type = Tokentype::IntLit;
                     }
                 } else {
                 	LogError(Error, loc, "Unexpected character \"" + std::string(1, currentChar) + "\" at (" + std::to_string(loc.line) + "," + std::to_string(loc.column) + ")");

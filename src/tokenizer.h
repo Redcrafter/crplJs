@@ -2,7 +2,8 @@
 #include <string>
 #include <vector>
 
-enum class TokenType {
+// Name should be TokenType but that is defined somewhere in Windows.h
+enum class Tokentype {
     Eof = -1,
 
     ID,
@@ -91,7 +92,7 @@ struct SourceLocation {
 };
 
 struct Token {
-    TokenType type;
+    Tokentype type;
     std::string spelling;
     SourceLocation location;
 };

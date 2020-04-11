@@ -14,14 +14,14 @@ static void LogError(LogLevel level, const std::string& message) {
 	switch(level) {
 		case FatalError:
 			error = true;
-			std::cout << FgRed << "fatal error: " << Reset;
+			std::cout << FgBrightRed << "fatal error: " << Reset;
 			break;
 		case Error:
 			error = true;
-			std::cout << FgRed << "error: " << Reset;
+			std::cout << FgBrightRed << "error: " << Reset;
 			break;
 		case Warning:
-			std::cout << FgMagenta << "error: " << Reset;
+			std::cout << FgBrightMagenta << "error: " << Reset;
 			break;
 	}
 	std::cout << message << std::endl;

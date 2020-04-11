@@ -296,7 +296,7 @@ void Converter::visit(const Scope& node) {
 	auto scope = scopes.back();
 	scopes.pop_back();
 	for(auto&& n : scope) {
-		if(n.second->Type == TokenType::Let) {
+		if(n.second->Type == Tokentype::Let) {
 			buffer << "--" << n.second->getName();
 			newLine();
 		}
@@ -304,7 +304,7 @@ void Converter::visit(const Scope& node) {
 }
 
 void Converter::visit(const LetStatement& node) {
-	if(node.Type == TokenType::Const) {
+	if(node.Type == Tokentype::Const) {
 		LogError(Error, node.Location, "Input variable only allowed at root level");
 	}
 	if(node.Value) {
@@ -320,7 +320,7 @@ void Converter::visit(const LetStatement& node) {
 	if(findVar(node.Name)) {
 		LogError(Warning, node.Location, "Declaration of '" + node.Name + "' hides previous local declaration");
 	}
-	if(node.Type == TokenType::Var) {
+	if(node.Type == Tokentype::Var) {
 		scopes[0][node.Name] = &node;
 	}
 	scope[node.Name] = &node;
@@ -362,16 +362,16 @@ void Converter::visit(const PreExpression& node, bool discard) {
 	}
 
 	switch(node.Type) {
-		case TokenType::Inc:
-		case TokenType::Dec:
+		case Tokentype::Inc:
+		case Tokentype::Dec:
 			LogError(Error, node.Location, "++ and -- Currently not supported");
 			break;
-		case TokenType::Add: break;
-		case TokenType::Sub: buffer << "neg ";
+		case Tokentype::Add: break;
+		case Tokentype::Sub: buffer << "neg ";
 			break;
-		case TokenType::LNot: buffer << "not ";
+		case Tokentype::LNot: buffer << "not ";
 			break;
-		case TokenType::Not: buffer << "neg 1 sub ";
+		case Tokentype::Not: buffer << "neg 1 sub ";
 			break;
 		default: throw std::runtime_error("Not reachable");
 	}
@@ -382,7 +382,7 @@ void Converter::visit(const PostExpression& node, bool discard) {
 }
 
 void Converter::visit(const Operation& node, bool discard) {
-	if(node.Type == TokenType::Assign) {
+	if(node.Type == Tokentype::Assign) {
 		auto var = dynamic_cast<Variable*>(node.Left);
 		if(var) {
 			visit(node.Right, false);
@@ -428,57 +428,57 @@ void Converter::visit(const Operation& node, bool discard) {
 	}
 
 	switch(node.Type) {
-		case TokenType::LOr:
+		case Tokentype::LOr:
 			buffer << "or ";
 			break;
-		case TokenType::LAnd:
+		case Tokentype::LAnd:
 			buffer << "and ";
 			break;
-		case TokenType::NullCoal:
+		case Tokentype::NullCoal:
 			buffer << "swap dup if swap pop else pop endif ";
 			break;
-		case TokenType::Equals:
+		case Tokentype::Equals:
 			buffer << "eq ";
 			break;
-		case TokenType::NEquals:
+		case Tokentype::NEquals:
 			buffer << "neq ";
 			break;
-		case TokenType::Less:
+		case Tokentype::Less:
 			buffer << "lt ";
 			break;
-		case TokenType::LessEq:
+		case Tokentype::LessEq:
 			buffer << "lte ";
 			break;
-		case TokenType::Greater:
+		case Tokentype::Greater:
 			buffer << "gt ";
 			break;
-		case TokenType::GreaterEq:
+		case Tokentype::GreaterEq:
 			buffer << "gte ";
 			break;
-		case TokenType::Or:
-		case TokenType::Xor:
-		case TokenType::And:
+		case Tokentype::Or:
+		case Tokentype::Xor:
+		case Tokentype::And:
 			throw "Not implemented";
-		case TokenType::LShift:
+		case Tokentype::LShift:
 			buffer << "2 swap pow mul ";
-		case TokenType::RShift:
+		case Tokentype::RShift:
 			buffer << "2 swap pow div ";
-		case TokenType::Sub:
+		case Tokentype::Sub:
 			buffer << "sub ";
 			break;
-		case TokenType::Mul:
+		case Tokentype::Mul:
 			buffer << "mul ";
 			break;
-		case TokenType::Pow:
+		case Tokentype::Pow:
 			buffer << "pow ";
 			break;
-		case TokenType::Div:
+		case Tokentype::Div:
 			buffer << "div ";
 			break;
-		case TokenType::Mod:
+		case Tokentype::Mod:
 			buffer << "mod ";
 			break;
-		case TokenType::Add:
+		case Tokentype::Add:
 			if(resolveType(node) == Types::String) {
 				buffer << "concat ";
 			} else {
@@ -597,7 +597,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 			}
 			cnvrt.functions[func->Name] = func;
 		} else if(auto var = dynamic_cast<LetStatement*>(node)) {
-			if(var->Type == TokenType::Const) {
+			if(var->Type == Tokentype::Const) {
 				cnvrt.buffer << '$' << var->Name << ':';
 				cnvrt.scopes[0][var->Name] = var;
 
@@ -609,7 +609,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 					continue;
 				}
 				if(const auto op = dynamic_cast<PreExpression*>(var->Value)) {
-					if(op->Type == TokenType::Sub && (dynamic_cast<IntLit*>(op->Left) || dynamic_cast<FloatLit*>(op->Left))) {
+					if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Left) || dynamic_cast<FloatLit*>(op->Left))) {
 						cnvrt.buffer << "-";
 						cnvrt.visit(op->Left, false);
 						cnvrt.stack = 0;
@@ -635,7 +635,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 			continue;
 		}
 		if(auto l = dynamic_cast<LetStatement*>(node)) {
-			if(l->Type == TokenType::Const) {
+			if(l->Type == Tokentype::Const) {
 				continue;
 			}
 		}

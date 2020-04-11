@@ -27,7 +27,7 @@ Parser::Parser(std::deque<Token> tokens): Tokens(std::move(tokens)), CurrentToke
 	Tokens.pop_front();
 }
 
-std::string Parser::accept(TokenType type) {
+std::string Parser::accept(Tokentype type) {
 	Token t = CurrentToken;
     if(CurrentToken.type != type) {
 		LogError(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
@@ -44,7 +44,7 @@ void Parser::acceptIt() {
 std::vector<AstNode*> Parser::Parse() {
     std::vector<AstNode*> statements;
 
-    while (CurrentToken.type != TokenType::Eof) {
+    while (CurrentToken.type != Tokentype::Eof) {
         auto st = ParseStatement();
         statements.push_back(st);
     }
@@ -56,115 +56,115 @@ Statement* Parser::ParseStatement() {
     const SourceLocation location = CurrentToken.location;
 
     switch (CurrentToken.type) {
-        case TokenType::Return: {
+        case Tokentype::Return: {
             acceptIt();
             Expression* expr = nullptr;
 
-            if (CurrentToken.type != TokenType::Semicolon) {
+            if (CurrentToken.type != Tokentype::Semicolon) {
                 expr = ParseExpression();
             }
-            if (CurrentToken.type == TokenType::Semicolon) {
+            if (CurrentToken.type == Tokentype::Semicolon) {
                 acceptIt();
             }
             return new ReturnStatement(location, expr);
         }
-        case TokenType::For: {
+        case Tokentype::For: {
             Expression* a = nullptr;
             Expression* b = nullptr;
             Expression* c = nullptr;
             acceptIt();
-            accept(TokenType::LParen);
-            if (CurrentToken.type != TokenType::Semicolon) {
+            accept(Tokentype::LParen);
+            if (CurrentToken.type != Tokentype::Semicolon) {
                 a = ParseExpression();
             }
-            accept(TokenType::Semicolon);
-            if (CurrentToken.type != TokenType::Semicolon) {
+            accept(Tokentype::Semicolon);
+            if (CurrentToken.type != Tokentype::Semicolon) {
                 b = ParseExpression();
             }
-            accept(TokenType::Semicolon);
-            if (CurrentToken.type != TokenType::Semicolon) {
+            accept(Tokentype::Semicolon);
+            if (CurrentToken.type != Tokentype::Semicolon) {
                 a = ParseExpression();
             }
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
 
             return new LoopStatement(location, a, b, c, ParseStatement());
         }
-        case TokenType::While: {
+        case Tokentype::While: {
             acceptIt();
-            accept(TokenType::LParen);
+            accept(Tokentype::LParen);
             auto condition = ParseExpression();
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
             return new LoopStatement(location, nullptr, condition, nullptr, ParseStatement());
         }
-        case TokenType::Do: {
+        case Tokentype::Do: {
             acceptIt();
             auto body = ParseStatement();
-            accept(TokenType::While);
-            accept(TokenType::LParen);
+            accept(Tokentype::While);
+            accept(Tokentype::LParen);
             auto condition = ParseExpression();
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
 
             return new DoLoopStatement(location, condition, body);
         }
-        case TokenType::If: {
+        case Tokentype::If: {
             acceptIt();
-            accept(TokenType::LParen);
+            accept(Tokentype::LParen);
             auto condition = ParseExpression();
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
             auto ifS = ParseStatement();
             Statement* elseS = nullptr;
-            if (CurrentToken.type == TokenType::Else) {
+            if (CurrentToken.type == Tokentype::Else) {
                 acceptIt();
                 elseS = ParseStatement();
             }
 
             return new IfStatement(location, condition, ifS, elseS);
         }
-        case TokenType::LBrace: {
+        case Tokentype::LBrace: {
             acceptIt();
             std::vector<Statement*> body;
-            while (CurrentToken.type != TokenType::RBrace) {
+            while (CurrentToken.type != Tokentype::RBrace) {
                 body.push_back(ParseStatement());
             }
             acceptIt();
             return new Scope(location, body);
         }
-        case TokenType::Const:
-        case TokenType::Var:
-        case TokenType::Let: {
+        case Tokentype::Const:
+        case Tokentype::Var:
+        case Tokentype::Let: {
             auto type = CurrentToken.type;
             acceptIt();
-            auto name = accept(TokenType::ID);
+            auto name = accept(Tokentype::ID);
             Expression* value = nullptr;
-            if (CurrentToken.type == TokenType::Assign) {
+            if (CurrentToken.type == Tokentype::Assign) {
                 acceptIt();
                 value = ParseExpression();
             }
-            accept(TokenType::Semicolon);
+            accept(Tokentype::Semicolon);
 
             return new LetStatement(location, type, name, value);
         }
-        case TokenType::Function: {
+        case Tokentype::Function: {
             acceptIt();
-            auto name = accept(TokenType::ID);
-            accept(TokenType::LParen);
+            auto name = accept(Tokentype::ID);
+            accept(Tokentype::LParen);
 
             // TODO: params
             std::vector<Param> params;
-            while (CurrentToken.type != TokenType::RParen) {
-                auto name = accept(TokenType::ID);
+            while (CurrentToken.type != Tokentype::RParen) {
+                auto name = accept(Tokentype::ID);
                 Expression* def = nullptr;
-                if (CurrentToken.type == TokenType::Assign) {
+                if (CurrentToken.type == Tokentype::Assign) {
                     acceptIt();
                     def = ParseExpression();
                 }
                 params.push_back(Param { name, def });
-                if (CurrentToken.type != TokenType::Comma) {
+                if (CurrentToken.type != Tokentype::Comma) {
                     break;
                 }
                 acceptIt();
             }
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
             auto body = ParseStatement();
 
             return new FunctionDecl(location, name, params, body);
@@ -172,7 +172,7 @@ Statement* Parser::ParseStatement() {
     }
 
     auto expr = ParseExpression();
-    accept(TokenType::Semicolon);
+    accept(Tokentype::Semicolon);
     return expr;
 }
 
@@ -181,18 +181,18 @@ Expression* Parser::ParseExpression() {
     auto left = ParseSelect();
 
     switch (CurrentToken.type) {
-        case TokenType::Assign:
-        case TokenType::AddAssign:
-        case TokenType::SubAssign:
-        case TokenType::MulAssign:
-        case TokenType::DivAssign:
-        case TokenType::ModAssign:
-        case TokenType::AndAssign:
-        case TokenType::OrAssign:
-        case TokenType::XorAssign:
-        case TokenType::LshiftAssign:
-        case TokenType::RshiftAssign:
-            TokenType type = CurrentToken.type;
+        case Tokentype::Assign:
+        case Tokentype::AddAssign:
+        case Tokentype::SubAssign:
+        case Tokentype::MulAssign:
+        case Tokentype::DivAssign:
+        case Tokentype::ModAssign:
+        case Tokentype::AndAssign:
+        case Tokentype::OrAssign:
+        case Tokentype::XorAssign:
+        case Tokentype::LshiftAssign:
+        case Tokentype::RshiftAssign:
+            Tokentype type = CurrentToken.type;
             acceptIt();
             return new Operation(location, type, left, ParseExpression());
     }
@@ -203,10 +203,10 @@ Expression* Parser::ParseSelect() {
     auto location = CurrentToken.location;
 
     auto select = ParseLor();
-    if (CurrentToken.type == TokenType::QMark) {
+    if (CurrentToken.type == Tokentype::QMark) {
         acceptIt();
         auto trueVal = ParseSelect();
-        accept(TokenType::Colon);
+        accept(Tokentype::Colon);
         auto falseVal = ParseSelect();
 
         return new SelectExpression(location, select, trueVal, falseVal);
@@ -217,9 +217,9 @@ Expression* Parser::ParseSelect() {
 Expression* Parser::ParseLor() {
     auto location = CurrentToken.location;
     auto left = ParseLand();
-    if (CurrentToken.type == TokenType::LOr) {
+    if (CurrentToken.type == Tokentype::LOr) {
         acceptIt();
-        return new Operation(location, TokenType::LOr, left, ParseLor());
+        return new Operation(location, Tokentype::LOr, left, ParseLor());
     }
     return left;
 }
@@ -227,9 +227,9 @@ Expression* Parser::ParseLor() {
 Expression* Parser::ParseLand() {
     auto location = CurrentToken.location;
     auto left = ParseNullCoal();
-    if (CurrentToken.type == TokenType::LAnd) {
+    if (CurrentToken.type == Tokentype::LAnd) {
         acceptIt();
-        return new Operation(location, TokenType::LAnd, left, ParseLand());
+        return new Operation(location, Tokentype::LAnd, left, ParseLand());
     }
     return left;
 }
@@ -237,9 +237,9 @@ Expression* Parser::ParseLand() {
 Expression* Parser::ParseNullCoal() {
     auto location = CurrentToken.location;
     auto left = ParseOr();
-    if (CurrentToken.type == TokenType::NullCoal) {
+    if (CurrentToken.type == Tokentype::NullCoal) {
         acceptIt();
-        return new Operation(location, TokenType::NullCoal, left, ParseNullCoal());
+        return new Operation(location, Tokentype::NullCoal, left, ParseNullCoal());
     }
     return left;
 }
@@ -247,9 +247,9 @@ Expression* Parser::ParseNullCoal() {
 Expression* Parser::ParseOr() {
     auto location = CurrentToken.location;
     auto left = ParseXor();
-    if (CurrentToken.type == TokenType::Or) {
+    if (CurrentToken.type == Tokentype::Or) {
         acceptIt();
-        return new Operation(location, TokenType::Or, left, ParseOr());
+        return new Operation(location, Tokentype::Or, left, ParseOr());
     }
     return left;
 }
@@ -257,9 +257,9 @@ Expression* Parser::ParseOr() {
 Expression* Parser::ParseXor() {
     auto location = CurrentToken.location;
     auto left = ParseAnd();
-    if (CurrentToken.type == TokenType::Xor) {
+    if (CurrentToken.type == Tokentype::Xor) {
         acceptIt();
-        return new Operation(location, TokenType::Xor, left, ParseXor());
+        return new Operation(location, Tokentype::Xor, left, ParseXor());
     }
     return left;
 }
@@ -267,9 +267,9 @@ Expression* Parser::ParseXor() {
 Expression* Parser::ParseAnd() {
     auto location = CurrentToken.location;
     auto left = ParseEq();
-    if (CurrentToken.type == TokenType::And) {
+    if (CurrentToken.type == Tokentype::And) {
         acceptIt();
-        return new Operation(location, TokenType::And, left, ParseAnd());
+        return new Operation(location, Tokentype::And, left, ParseAnd());
     }
     return left;
 }
@@ -277,8 +277,8 @@ Expression* Parser::ParseAnd() {
 Expression* Parser::ParseEq() {
     auto location = CurrentToken.location;
     auto left = ParseComp();
-    if (CurrentToken.type == TokenType::Equals ||
-        CurrentToken.type == TokenType::NEquals) {
+    if (CurrentToken.type == Tokentype::Equals ||
+        CurrentToken.type == Tokentype::NEquals) {
         auto t = CurrentToken.type;
         acceptIt();
         return new Operation(location, t, left, ParseEq());
@@ -289,10 +289,10 @@ Expression* Parser::ParseEq() {
 Expression* Parser::ParseComp() {
     auto location = CurrentToken.location;
     auto left = ParseShift();
-    if (CurrentToken.type == TokenType::Less ||
-        CurrentToken.type == TokenType::LessEq ||
-        CurrentToken.type == TokenType::Greater ||
-        CurrentToken.type == TokenType::GreaterEq) {
+    if (CurrentToken.type == Tokentype::Less ||
+        CurrentToken.type == Tokentype::LessEq ||
+        CurrentToken.type == Tokentype::Greater ||
+        CurrentToken.type == Tokentype::GreaterEq) {
         auto t = CurrentToken.type;
         acceptIt();
         return new Operation(location, t, left, ParseComp());
@@ -303,8 +303,8 @@ Expression* Parser::ParseComp() {
 Expression* Parser::ParseShift() {
     auto location = CurrentToken.location;
     auto left = ParseAdd();
-    if (CurrentToken.type == TokenType::LShift ||
-        CurrentToken.type == TokenType::RShift) {
+    if (CurrentToken.type == Tokentype::LShift ||
+        CurrentToken.type == Tokentype::RShift) {
         auto t = CurrentToken.type;
         acceptIt();
         return new Operation(location, t, left, ParseShift());
@@ -315,8 +315,8 @@ Expression* Parser::ParseShift() {
 Expression* Parser::ParseAdd() {
     auto location = CurrentToken.location;
     auto left = ParseMul();
-    if (CurrentToken.type == TokenType::Add ||
-        CurrentToken.type == TokenType::Sub) {
+    if (CurrentToken.type == Tokentype::Add ||
+        CurrentToken.type == Tokentype::Sub) {
         auto t = CurrentToken.type;
         acceptIt();
         return new Operation(location, t, left, ParseAdd());
@@ -327,9 +327,9 @@ Expression* Parser::ParseAdd() {
 Expression* Parser::ParseMul() {
     auto location = CurrentToken.location;
     auto left = ParsePrefix();
-    if (CurrentToken.type == TokenType::Mul ||
-        CurrentToken.type == TokenType::Div ||
-        CurrentToken.type == TokenType::Mod) {
+    if (CurrentToken.type == Tokentype::Mul ||
+        CurrentToken.type == Tokentype::Div ||
+        CurrentToken.type == Tokentype::Mod) {
         auto t = CurrentToken.type;
         acceptIt();
         return new Operation(location, t, left, ParseComp());
@@ -342,18 +342,18 @@ Expression* Parser::ParsePrefix() {
 
     auto type = CurrentToken.type;
     switch (type) {
-        case TokenType::Inc:
-        case TokenType::Dec:
-        case TokenType::Add:
-        case TokenType::Sub:
-        case TokenType::LNot:
-        case TokenType::Not:
+        case Tokentype::Inc:
+        case Tokentype::Dec:
+        case Tokentype::Add:
+        case Tokentype::Sub:
+        case Tokentype::LNot:
+        case Tokentype::Not:
             acceptIt();
             return new PreExpression(location, type, ParsePrefix());
-        // case TokenType::LParen: {
+        // case Tokentype::LParen: {
         //     acceptIt();
         //     auto type = ParseType();
-        //     accept(TokenType::RParen);
+        //     accept(Tokentype::RParen);
 
         //     return new CastExpression(location, type, ParsePrefix());
         // }
@@ -369,22 +369,22 @@ Expression* Parser::ParsePostfix() {
     while (true) {
         auto type = CurrentToken.type;
         switch (type) {
-            case TokenType::Inc:
-            case TokenType::Dec:
+            case Tokentype::Inc:
+            case Tokentype::Dec:
                 acceptIt();
                 current = new PostExpression(location, type, current);
                 continue;
-            case TokenType::LParen:
+            case Tokentype::LParen:
                 acceptIt();
                 std::vector<Expression*> params;
-                while (CurrentToken.type != TokenType::RParen) {
+                while (CurrentToken.type != Tokentype::RParen) {
                     params.push_back(ParseExpression());
-                    if (CurrentToken.type == TokenType::Comma) {
+                    if (CurrentToken.type == Tokentype::Comma) {
                         acceptIt();
                     }
                 }
                 current = new FunctionCall(location, current, params);
-                accept(TokenType::RParen);
+                accept(Tokentype::RParen);
                 continue;
         }
         break;
@@ -397,15 +397,15 @@ Expression* Parser::ParseAtom() {
     auto location = CurrentToken.location;
 
     switch (CurrentToken.type) {
-        case TokenType::IntLit: return new IntLit(location, std::stol(accept(TokenType::IntLit)));
-        case TokenType::FloatLit: return new FloatLit(location, std::stod(accept(TokenType::FloatLit)));
-        case TokenType::StringLit: return new StringLit(location, accept(TokenType::StringLit));
-        case TokenType::BoolLit: return new BoolLit(location, accept(TokenType::BoolLit) == "true");
-        case TokenType::ID: return new Variable(location, accept(TokenType::ID));
-        case TokenType::LParen:
+        case Tokentype::IntLit: return new IntLit(location, std::stol(accept(Tokentype::IntLit)));
+        case Tokentype::FloatLit: return new FloatLit(location, std::stod(accept(Tokentype::FloatLit)));
+        case Tokentype::StringLit: return new StringLit(location, accept(Tokentype::StringLit));
+        case Tokentype::BoolLit: return new BoolLit(location, accept(Tokentype::BoolLit) == "true");
+        case Tokentype::ID: return new Variable(location, accept(Tokentype::ID));
+        case Tokentype::LParen:
             acceptIt();
             auto ret = ParseExpression();
-            accept(TokenType::RParen);
+            accept(Tokentype::RParen);
             return ret;
     }
 
