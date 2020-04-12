@@ -48,6 +48,10 @@ int main(int argc, char** argv) {
 				out << result;
 				out.close();
 			}
+
+			for(auto& i : ast) {
+				delete i;
+			}
 		}
 	}
 	

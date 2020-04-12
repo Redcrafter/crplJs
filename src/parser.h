@@ -12,6 +12,7 @@ struct AstNode {
     AstNode(const SourceLocation& location) : Location(location) {}
     AstNode(const AstNode&) = delete;
     AstNode(AstNode&& o) noexcept : Location(o.Location) {}
+	virtual ~AstNode() { };
 
     virtual void visit(Converter& converter, bool discard) const = 0;
 };
@@ -86,7 +87,7 @@ struct Scope : Statement {
     Scope(const SourceLocation location, std::vector<Statement*> body) : Statement(location), Body(body) {}
 
     ~Scope() {
-        for (auto&& i : Body) {
+        for (auto i : Body) {
             delete i;
         }
     }
@@ -112,6 +113,8 @@ struct LetStatement : Statement {
 struct Param {
     std::string Name;
     Expression* Default;
+
+    ~Param() { delete Default; }
 };
 struct FunctionDecl : Statement {
     std::string Name;
@@ -119,10 +122,7 @@ struct FunctionDecl : Statement {
     Statement* Body;
 
     FunctionDecl(const SourceLocation location, std::string name, std::vector<Param> params, Statement* body) : Statement(location), Name(name), Params(params), Body(body) {}
-
-    ~FunctionDecl() {
-        delete Body;
-    }
+    ~FunctionDecl() { delete Body; }
 
     void visit(Converter& converter, bool discard) const;
 };
@@ -167,6 +167,10 @@ struct Operation : Expression {
     Expression* Right;
 
     Operation(const SourceLocation location, Tokentype type, Expression* left, Expression* right) : Expression(location), Type(type), Left(left), Right(right) {}
+    ~Operation() {
+        delete Left;
+        delete Right;
+    }
 
     void visit(Converter& converter, bool discard) const;
 };
@@ -176,7 +180,8 @@ struct FunctionCall : Expression {
 
     FunctionCall(const SourceLocation location, Expression* left, std::vector<Expression*> params) : Expression(location), Left(left), Params(std::move(params)) {}
     ~FunctionCall() {
-        for (auto&& el : Params) {
+        delete Left;
+        for (auto el : Params) {
             delete el;
         }
     }
