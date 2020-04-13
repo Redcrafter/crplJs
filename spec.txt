@@ -27,7 +27,7 @@ shift	:= add (('<<' | '>>') shift)?
 add		:= mul (('+' | '-') add)?
 mul     := preFix (('*' | '/' | '%') mul)?
 preFix  := ('++' | '--' | '+' | '-' | '!' | '~')* postFix
-postFix := atom ('++' | '--' | call)*
-atom    := INT | FLOAT | BOOL | STRING | ID | '(' expr ')'
+postFix := atom ('++' | '--' | call | '[' expr ']' )*
+atom    := INT | FLOAT | BOOL | STRING | ID | '(' expr ')' | '[' (expr (',' expr)*)? ']'
 
 call := '(' (expr (',' expr)*)? ')'

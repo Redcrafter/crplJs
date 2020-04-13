@@ -12,6 +12,7 @@ void IfStatement::visit(Converter& converter, bool discard) const { converter.vi
 void Scope::visit(Converter& converter, bool discard) const { converter.visit(*this); }
 void LetStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
 void FunctionDecl::visit(Converter& converter, bool discard) const { converter.visit(*this); }
+
 void SelectExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 void PreExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 void PostExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
@@ -21,6 +22,7 @@ void IntLit::visit(Converter& converter, bool discard) const { converter.visit(*
 void FloatLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 void StringLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 void BoolLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
+void ArrayLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 void Variable::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
 
 Parser::Parser(std::deque<Token> tokens): Tokens(std::move(tokens)), CurrentToken(Tokens.front()) {
@@ -374,18 +376,28 @@ Expression* Parser::ParsePostfix() {
                 acceptIt();
                 current = new PostExpression(location, type, current);
                 continue;
-            case Tokentype::LParen:
+            case Tokentype::LParen: {
                 acceptIt();
                 std::vector<Expression*> params;
-                while (CurrentToken.type != Tokentype::RParen) {
-                    params.push_back(ParseExpression());
-                    if (CurrentToken.type == Tokentype::Comma) {
+                if(CurrentToken.type != Tokentype::RParen) {
+                    while (true) {
+                        params.push_back(ParseExpression());
+                        if (CurrentToken.type != Tokentype::Comma) {
+                            break;
+                        }
                         acceptIt();
                     }
                 }
                 current = new FunctionCall(location, current, params);
                 accept(Tokentype::RParen);
                 continue;
+            }
+            case Tokentype::LBracket: {
+                acceptIt();
+                auto select = ParseExpression();
+                accept(Tokentype::RBracket);
+                return new Operation(location, Tokentype::LBracket, current, select);
+            }
         }
         break;
     }
@@ -402,11 +414,28 @@ Expression* Parser::ParseAtom() {
         case Tokentype::StringLit: return new StringLit(location, accept(Tokentype::StringLit));
         case Tokentype::BoolLit: return new BoolLit(location, accept(Tokentype::BoolLit) == "true");
         case Tokentype::ID: return new Variable(location, accept(Tokentype::ID));
-        case Tokentype::LParen:
+        case Tokentype::LParen: {
             acceptIt();
             auto ret = ParseExpression();
             accept(Tokentype::RParen);
             return ret;
+        }
+        case Tokentype::LBracket: {
+            acceptIt();
+            std::vector<Expression*> elements;
+            if(CurrentToken.type != Tokentype::RBracket) {
+                while (true) {
+                    elements.push_back(ParseExpression());
+                    if(CurrentToken.type == Tokentype::Comma) {
+                        acceptIt();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            accept(Tokentype::RBracket);
+            return new ArrayLit(location, elements);
+        }
     }
 
 	LogError(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');

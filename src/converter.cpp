@@ -383,8 +383,7 @@ void Converter::visit(const PostExpression& node, bool discard) {
 
 void Converter::visit(const Operation& node, bool discard) {
 	if(node.Type == Tokentype::Assign) {
-		auto var = dynamic_cast<Variable*>(node.Left);
-		if(var) {
+		if(auto var = dynamic_cast<Variable*>(node.Left)) {
 			visit(node.Right, false);
 			auto v = findVar(var->Name);
 			if(v) {
@@ -397,9 +396,36 @@ void Converter::visit(const Operation& node, bool discard) {
 			} else {
 				LogError(Error, node.Location, "Undefined variable " + var->Name);
 			}
-		} else {
-			LogError(Error, node.Location, "Left side of an assign has to be a variable");
+			return;
 		}
+		if(auto arr = dynamic_cast<Operation*>(node.Left)) {
+			if(arr->Type == Tokentype::LBracket) {
+				if(auto l = dynamic_cast<Variable*>(arr->Left)) {
+					if(discard) {
+						visit(l, false); // Push list ref
+						visit(arr->Right, false); // push index
+						visit(node.Right, false); // push value
+					} else {
+						visit(node.Right, false); // push value
+						buffer << "dup ";
+						visit(l, false); // Push list ref
+						buffer << "swap ";
+						visit(arr->Right, false); // push index
+						buffer << "swap ";
+
+						stack++;
+					}
+					
+					buffer << "InsertListElement ";
+					stack -= 3;
+					return;
+				} else {
+					LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
+					return;
+				}
+			}
+		}
+		LogError(Error, node.Location, "Left side of an assign has to be a variable");
 		return;
 	}
 
@@ -485,6 +511,12 @@ void Converter::visit(const Operation& node, bool discard) {
 				buffer << "add ";
 			}
 			break;
+		case Tokentype::LBracket:
+			if(!dynamic_cast<Variable*>(node.Left)) {
+				LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
+			}
+			buffer << "GetListElement ";
+			break;
 		default:
 			throw std::runtime_error("Not reachable");
 	}
@@ -555,6 +587,33 @@ void Converter::visit(const StringLit& node, bool discard) {
 void Converter::visit(const BoolLit& node, bool discard) {
 	if(!discard) {
 		buffer << (node.Value ? "TRUE " : "FALSE ");
+		stack++;
+	}
+}
+
+void Converter::visit(const ArrayLit& node, bool discard) {
+	if(discard) {
+		for(const auto element : node.Elements) {
+			visit(element, true);
+			assert(stack == 0);
+		}
+	} else {
+		int startStack = stack;
+		buffer << "CreateList ";
+
+		for(auto element : node.Elements) {
+			buffer << "dup ";
+			visit(element, false);
+			if(stack == 0) {
+				LogError(Warning, element->Location, "array element returns no elements");
+			} else if(stack > 1) {
+				LogError(Warning, element->Location, "array element returns multiple elements");
+			}
+			while (stack > 0) {
+				buffer << "AppendToList ";
+				stack--;
+			}
+		}
 		stack++;
 	}
 }

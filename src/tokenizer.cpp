@@ -166,6 +166,8 @@ std::vector<Token> tokenize(const std::string& fileName) {
             case ':': type = Tokentype::Colon; take(); break;
             case ';': type = Tokentype::Semicolon; take(); break;
             case '~': type = Tokentype::Not; take(); break;
+            case '[': type = Tokentype::LBracket; take(); break;
+            case ']': type = Tokentype::RBracket; take(); break;
             case '.': 
                 take();
                 if(isDigit(currentChar)) {

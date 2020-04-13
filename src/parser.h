@@ -213,6 +213,17 @@ struct BoolLit : Expression {
 
     void visit(Converter& converter, bool discard) const;
 };
+struct ArrayLit: Expression {
+    std::vector<Expression*> Elements;
+
+    ArrayLit(const SourceLocation location, std::vector<Expression*> elements): Expression(location), Elements(elements) {}
+    ~ArrayLit() {
+        for (auto i : Elements) {
+            delete i;
+        }
+    }
+    void visit(Converter& converter, bool discard) const;
+};
 struct Variable : Expression {
     std::string Name;
     Variable(const SourceLocation location, std::string name) : Expression(location), Name(name) {}

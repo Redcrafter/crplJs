@@ -34,6 +34,8 @@ enum class Tokentype {
     RParen,  // )
     LBrace,  // {
     RBrace,  // }
+    LBracket, // [
+    RBracket, // ]
 
     Less,       // <
     LessEq,     // <=

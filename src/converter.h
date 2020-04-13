@@ -9,10 +9,12 @@
 class AstNode;
 
 enum class Types {
-    Unknown,
+	Unknown,
+    Void,
     Int,
     Float,
-    String
+    String,
+    List
 };
 
 class Converter {
@@ -53,6 +55,7 @@ public:
     void visit(const FloatLit& node, bool discard);
     void visit(const StringLit& node, bool discard);
     void visit(const BoolLit& node, bool discard);
+    void visit(const ArrayLit& node, bool discard);
     void visit(const Variable& node, bool discard);
 };
 
