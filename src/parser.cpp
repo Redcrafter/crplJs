@@ -122,15 +122,7 @@ Statement* Parser::ParseStatement() {
 
             return new IfStatement(location, condition, ifS, elseS);
         }
-        case Tokentype::LBrace: {
-            acceptIt();
-            std::vector<Statement*> body;
-            while (CurrentToken.type != Tokentype::RBrace) {
-                body.push_back(ParseStatement());
-            }
-            acceptIt();
-            return new Scope(location, body);
-        }
+        case Tokentype::LBrace: return ParseScope();
         case Tokentype::Const:
         case Tokentype::Var:
         case Tokentype::Let: {
@@ -167,7 +159,7 @@ Statement* Parser::ParseStatement() {
                 acceptIt();
             }
             accept(Tokentype::RParen);
-            auto body = ParseStatement();
+            auto body = ParseScope();
 
             return new FunctionDecl(location, name, params, body);
         }
@@ -176,6 +168,18 @@ Statement* Parser::ParseStatement() {
     auto expr = ParseExpression();
     accept(Tokentype::Semicolon);
     return expr;
+}
+
+Scope* Parser::ParseScope() {
+    const SourceLocation location = CurrentToken.location;
+
+    accept(Tokentype::LBrace);
+    std::vector<Statement*> body;
+    while (CurrentToken.type != Tokentype::RBrace) {
+        body.push_back(ParseStatement());
+    }
+    acceptIt();
+    return new Scope(location, body);
 }
 
 Expression* Parser::ParseExpression() {

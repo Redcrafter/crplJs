@@ -10,7 +10,7 @@ if		:= 'if' '(' expr ')' statement ('else' statement)?
 scope   := '{' statement* '}'
 varDecl := ('let' | 'var' | 'const') ID ('=' expr)?
 
-functionDecl := 'function' ID '(' (type ID (',' type ID)*)? ')' statement
+functionDecl := 'function' ID '(' (type ID (',' type ID)*)? ')' scope
 
 expr    := assign
 assign 	:= select (('=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=') assign)?

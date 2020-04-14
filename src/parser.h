@@ -119,9 +119,9 @@ struct Param {
 struct FunctionDecl : Statement {
     std::string Name;
     std::vector<Param> Params;
-    Statement* Body;
+    Scope* Body;
 
-    FunctionDecl(const SourceLocation location, std::string name, std::vector<Param> params, Statement* body) : Statement(location), Name(name), Params(params), Body(body) {}
+    FunctionDecl(const SourceLocation location, std::string name, std::vector<Param> params, Scope* body) : Statement(location), Name(name), Params(params), Body(body) {}
     ~FunctionDecl() { delete Body; }
 
     void visit(Converter& converter, bool discard) const;
@@ -145,19 +145,19 @@ struct SelectExpression : Expression {
 };
 struct PreExpression : Expression {
     Tokentype Type;
-    Expression* Left;
+    Expression* Right;
 
-    PreExpression(const SourceLocation location, Tokentype type, Expression* left) : Expression(location), Type(type), Left(left) {}
-    ~PreExpression() { delete Left; }
+    PreExpression(const SourceLocation location, Tokentype type, Expression* left) : Expression(location), Type(type), Right(left) {}
+    ~PreExpression() { delete Right; }
 
     void visit(Converter& converter, bool discard) const;
 };
 struct PostExpression : Expression {
     Tokentype Type;
-    Expression* Right;
+    Expression* Left;
 
-    PostExpression(const SourceLocation location, Tokentype type, Expression* right) : Expression(location), Type(type), Right(right) {}
-    ~PostExpression() { delete Right; }
+    PostExpression(const SourceLocation location, Tokentype type, Expression* right) : Expression(location), Type(type), Left(right) {}
+    ~PostExpression() { delete Left; }
 
     void visit(Converter& converter, bool discard) const;
 };
@@ -247,6 +247,7 @@ class Parser {
     std::string accept(Tokentype type);
 
     Statement* ParseStatement();
+    Scope* ParseScope();
 
     Expression* ParseExpression();
     Expression* ParseSelect();
