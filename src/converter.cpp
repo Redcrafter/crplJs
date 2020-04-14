@@ -94,6 +94,19 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"SetTimer3", {1, 0}},
 	#pragma endregion
 
+	#pragma region String Commands
+	{"Concat", {2,1}},
+	{"Substring", {3,1}},
+	{"StartsWith", {2,1}},
+	{"EndsWith", {2,1}},
+	{"Split", {2,1}},
+	{"StringToList", {1,1}},
+	{"ToUpper", {1,1}},
+	{"ToLower", {1,1}},
+	{"StringLength", {1,1}},
+	{"StringReplace", {3,1}},
+	#pragma endregion
+
 	#pragma region Input Commands
 	{"GetKey", {1, 1}},
 	{"GetKeyDown", {1, 1}},
@@ -355,7 +368,7 @@ void Converter::visit(const SelectExpression& node, bool discard) {
 }
 
 void Converter::visit(const PreExpression& node, bool discard) {
-	visit(node.Left, discard);
+	visit(node.Right, discard);
 	if(discard) {
 		assert(stack == 0);
 		return;
@@ -507,6 +520,7 @@ void Converter::visit(const Operation& node, bool discard) {
 		case Tokentype::Add:
 			if(resolveType(node) == Types::String) {
 				buffer << "concat ";
+				LogError(Warning, node.Location, "Use template strings instead of addition");
 			} else {
 				buffer << "add ";
 			}
@@ -668,9 +682,9 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 					continue;
 				}
 				if(const auto op = dynamic_cast<PreExpression*>(var->Value)) {
-					if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Left) || dynamic_cast<FloatLit*>(op->Left))) {
+					if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Right) || dynamic_cast<FloatLit*>(op->Right))) {
 						cnvrt.buffer << "-";
-						cnvrt.visit(op->Left, false);
+						cnvrt.visit(op->Right, false);
 						cnvrt.stack = 0;
 						cnvrt.newLine();
 						continue;

@@ -71,9 +71,9 @@ function main() {
     } else {
         let rem = ceil((Startdelay - GetGameTimeFrames) / 30);
         if (startState) {
-            SetPopupText("This emitter is currently slumbering. It will awake in " + rem + " seconds with an output of " + (Camt * max(Empowerment + NegaPower, 0.1)) + " Creeper. Creeper.\n\t\t\n\t\t\n\t\t");
+            SetPopupText(`This emitter is currently slumbering. It will awake in ${rem} seconds with an output of ${Camt * max(Empowerment + NegaPower, 0.1)} Creeper. Creeper.\n\t\t\n\t\t\n\t\t`);
         } else {
-            SetPopupText("This emitter is currently slumbering. It will awake in " + rem + " seconds with an output of " + -ACamt + " AC.\n\t\t\n\t\t\n\t\t");
+            SetPopupText(`This emitter is currently slumbering. It will awake in ${rem} seconds with an output of ${-ACamt} AC.\n\t\t\n\t\t\n\t\t`);
         }
         delay(15);
     }
@@ -98,7 +98,7 @@ function awake() {
 
 function CProd() {
     let tCAmount = Camt * max(Empowerment + NegaPower, 0.1) * Cvar * Unstopped;
-    SetPopupText("Flood me with anti-creeper to save me!\nProducing " + tCAmount + " creeper every " + (round(Cinterval / 30, 2) * 1000) + " milliseconds.\n\n");
+    SetPopupText(`Flood me with anti-creeper to save me!\nProducing ${tCAmount} creeper every ${round(Cinterval / 30, 2) * 1000} milliseconds.\n\n`);
     SetUnitAttribute(Self, CONST_COUNTSFORVICTORY, true);
     SetImageColor(Self, "main", 150, 150, 150, 255);
 
@@ -116,7 +116,7 @@ function ACProd() {
         tAmount = (ACamt * EmpowermentAC * ACvar - EmissionBonus) * Unstopped;
     }
 
-    SetPopupText("Producing " + abs(tAmount * Unstopped) + " anti-creeper every " + (round(ACinterval / 30.00, 2) * 1000) + " milliseconds.\n\n");
+    SetPopupText(`Producing ${abs(tAmount * Unstopped)} anti-creeper every ${round(ACinterval / 30.00, 2) * 1000} milliseconds.\n\n`);
     SetUnitAttribute(Self, CONST_COUNTSFORVICTORY, false);
     SetImageColor(Self, "main", 255, 255, 255, 255);
     if (tAmount != 0) {

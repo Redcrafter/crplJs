@@ -30,6 +30,9 @@ enum class Tokentype {
     Break,     // break
     Continue,  // continue
 
+	Backtick, // `
+	Dollar, // $
+
     LParen,  // (
     RParen,  // )
     LBrace,  // {

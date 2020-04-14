@@ -95,13 +95,31 @@ std::map<std::string, Tokentype> keywords = {
     {"/*", Tokentype::MultiComment}
 };*/
 
+static char escapeChar(SourceLocation loc, char c) {
+    switch (c) {
+        case '\'': return '\'';
+        case '"': return '"';
+        case '?': return '?';
+        case '\\': return '\\';
+        case 'a': return '\a';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        case 'n': return '\n';
+        case 'r': return '\r';
+        case 't': return '\t';
+        case 'v': return '\v';
+        default: LogError(Error, loc, std::string("Unknown escape char \"") + static_cast<char>(c) + "\"");
+    }
+}
+
 std::vector<Token> tokenize(const std::string& fileName) {
     SourceLocation loc{fileName,  1, 1};
-	std::ifstream file(fileName);
+	std::ifstream file(fileName, std::ios::in, std::ios::binary);
 
 	std::vector<Token> tokens;
     std::string spelling;
     auto currentChar = file.get();
+	int isInTemp = 0;
 	
     auto skip = [&] {
         if (currentChar == '\n') {
@@ -119,6 +137,42 @@ std::vector<Token> tokenize(const std::string& fileName) {
         skip();
     };
 
+	auto jesus = [&] {
+		auto start = loc;
+		
+		while(true) {
+			if(currentChar == '$') {
+				skip();
+				if(currentChar == '{') {
+					skip();
+
+					if(!spelling.empty()) {
+						tokens.push_back(Token{ Tokentype::StringLit, spelling, start });
+					}
+					tokens.push_back(Token{ Tokentype::Dollar, "$", start });
+
+					isInTemp++;
+					break;
+				} else {
+					spelling += '$';
+				}
+			} else if(currentChar == '\\') {
+				skip();
+				spelling += escapeChar(loc, currentChar);
+				skip();
+			} else if(currentChar == '`') {
+				if(!spelling.empty()) {
+					tokens.push_back(Token{ Tokentype::StringLit, spelling, start });
+				}
+				tokens.push_back(Token{ Tokentype::Backtick, "`", loc });
+				skip();
+				break;
+			} else {
+				take();
+			}
+		}
+	};
+	
     while (currentChar != EOF) {
         SourceLocation start = loc;
         spelling = "";
@@ -161,14 +215,29 @@ std::vector<Token> tokenize(const std::string& fileName) {
             case '(': type = Tokentype::LParen; take(); break;
             case ')': type = Tokentype::RParen; take(); break;
             case '{': type = Tokentype::LBrace; take(); break;
-            case '}': type = Tokentype::RBrace; take(); break;
+            case '}':
+        		if(isInTemp) {
+					skip();
+					isInTemp--;
+					jesus();
+        			continue;
+        		} else {
+					take();
+					type = Tokentype::RBrace; take();
+        		}
+				break;
             case ',': type = Tokentype::Comma; take(); break;
             case ':': type = Tokentype::Colon; take(); break;
             case ';': type = Tokentype::Semicolon; take(); break;
             case '~': type = Tokentype::Not; take(); break;
             case '[': type = Tokentype::LBracket; take(); break;
             case ']': type = Tokentype::RBracket; take(); break;
-            case '.': 
+            case '`':
+        		skip();
+				tokens.push_back(Token{ Tokentype::Backtick, "`", start });
+				jesus();
+                continue;
+            case '.':
                 take();
                 if(isDigit(currentChar)) {
                     do {
@@ -362,13 +431,8 @@ std::vector<Token> tokenize(const std::string& fileName) {
                         break;
                     } else if(currentChar == '\\') {
                         skip();
-                        switch (currentChar) {
-                            case '"': take(); break;
-                            case 'n': spelling += '\n'; skip(); break;
-                            case 'r': spelling += '\r'; skip(); break;
-                            case 't': spelling += '\t'; skip(); break;
-							default: LogError(Error, loc, std::string("Unknown escape char \"") + static_cast<char>(currentChar) + "\"");
-                        }
+                        spelling += escapeChar(loc, currentChar);
+                        skip();
                     } else {
                         take();
                     }

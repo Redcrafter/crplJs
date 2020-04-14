@@ -440,6 +440,32 @@ Expression* Parser::ParseAtom() {
             accept(Tokentype::RBracket);
             return new ArrayLit(location, elements);
         }
+        case Tokentype::Backtick: {
+            acceptIt();
+
+			Expression* ret = nullptr;
+    	
+            while (true) {
+				Expression* ptr;
+            	if(CurrentToken.type == Tokentype::StringLit) {
+					ptr = new StringLit(CurrentToken.location, accept(Tokentype::StringLit));
+            	} else if(CurrentToken.type == Tokentype::Dollar) {
+					acceptIt();
+					ptr = ParseExpression();
+            	} else {
+                    break;
+                }
+
+				if(ret == nullptr) {
+					ret = ptr;
+				} else {
+					ret = new FunctionCall(CurrentToken.location, new Variable(CurrentToken.location, "Concat"), std::vector<Expression*>({ ret, ptr }));
+				}
+            }
+            accept(Tokentype::Backtick);
+    		// TODO: maybe add custom class?
+			return ret;
+        }
     }
 
 	LogError(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');

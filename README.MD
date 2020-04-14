@@ -40,11 +40,10 @@ These variables will only be accessible in their current and lower scopes.
 Global variables can be declared by using var. These will be accessible from everywhere \
 `var global = 3.14` -> `3.14 ->global`
 
-String concatenation is done using `+`.
-There could be errors in the output code if the compiler is unsure wether to use concatenation or addition. In these cases the `concat` function can be used.\
-`"Hello " + "world!"`-> `"Hello " "world!" concat`\
+String concatenation should be done through template template strings or the `concat` function. Using `+` is also possible but could produce wrong output code in some cases.\
+`` `Hello ${var} world!` ``-> `"Hello " <-var " world!" concat concat`\
 or\
-`concat("Hello ", "world!")`-> `"Hello " "world!" concat`
+`"Hello " + var + " world!"`-> `"Hello " <-var " world!" concat concat`
 
 Another thing to watch out for is the amount of parameters a function requires and returns.\
 For example `CurrentCoords` returns 2 parameters.
