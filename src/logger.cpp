@@ -6,11 +6,11 @@
 
 bool error = false;
 
-bool getError() {
+bool Logger::getError() {
 	return error;
 }
 
-bool clearError() {
+void Logger::clearError() {
 	error = false;
 }
 

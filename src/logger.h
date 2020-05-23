@@ -16,5 +16,5 @@ namespace Logger {
 	void Log(LogLevel level, const SourceLocation& location, const std::string& message);
 
 	bool getError();
-	bool clearError();
+	void clearError();
 }
