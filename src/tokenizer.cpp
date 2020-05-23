@@ -108,7 +108,7 @@ static char escapeChar(SourceLocation loc, char c) {
         case 'r': return '\r';
         case 't': return '\t';
         case 'v': return '\v';
-        default: LogError(Error, loc, std::string("Unknown escape char \"") + static_cast<char>(c) + "\"");
+        default: Logger::Log(Error, loc, std::string("Unknown escape char \"") + static_cast<char>(c) + "\"");
     }
 }
 
@@ -465,7 +465,7 @@ std::vector<Token> tokenize(const std::string& fileName) {
                         type = Tokentype::IntLit;
                     }
                 } else {
-                	LogError(Error, loc, "Unexpected character \"" + std::string(1, currentChar) + "\" at (" + std::to_string(loc.line) + "," + std::to_string(loc.column) + ")");
+                	Logger::Log(Error, loc, "Unexpected character \"" + std::string(1, currentChar) + "\" at (" + std::to_string(loc.line) + "," + std::to_string(loc.column) + ")");
                 }
                 break;
         }

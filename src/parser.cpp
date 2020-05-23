@@ -32,7 +32,7 @@ Parser::Parser(std::deque<Token> tokens): Tokens(std::move(tokens)), CurrentToke
 std::string Parser::accept(Tokentype type) {
 	Token t = CurrentToken;
     if(CurrentToken.type != type) {
-		LogError(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
+		Logger::Log(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
     }
     acceptIt();
     return t.spelling;
@@ -501,5 +501,5 @@ Expression* Parser::ParseAtom() {
         }
     }
 
-	LogError(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
+	Logger::Log(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
 }

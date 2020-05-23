@@ -10,6 +10,10 @@ bool getError() {
 	return error;
 }
 
+bool clearError() {
+	error = false;
+}
+
 static void LogError(LogLevel level, const std::string& message) {
 	switch(level) {
 		case FatalError:
@@ -21,23 +25,23 @@ static void LogError(LogLevel level, const std::string& message) {
 			std::cout << FgBrightRed << "error: " << Reset;
 			break;
 		case Warning:
-			std::cout << FgBrightMagenta << "error: " << Reset;
+			std::cout << FgBrightMagenta << "warning: " << Reset;
 			break;
 	}
 	std::cout << message << std::endl;
 }
 
-void LogGlobalError(LogLevel level, const std::string& message) {
+void Logger::LogGlobal(LogLevel level, const std::string& message) {
 	std::cout << "crpl: ";
 	LogError(level, message);
 }
 
-void LogError(LogLevel level, const std::string& fileName, const std::string& message) {
+void Logger::Log(LogLevel level, const std::string& fileName, const std::string& message) {
 	std::cout << fileName << ": ";
 	LogError(level, message);
 }
 
-void LogError(LogLevel level, const SourceLocation& location, const std::string& message) {
+void Logger::Log(LogLevel level, const SourceLocation& location, const std::string& message) {
 	std::cout << location.fileName << ':' << location.line << ':' << location.column << ": ";
 	LogError(level, message);
 }

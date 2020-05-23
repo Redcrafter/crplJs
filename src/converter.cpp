@@ -272,7 +272,7 @@ void Converter::visit(const LoopStatement& node) {
 	buffer << "while ";
 	visit(node.Condition, false);
 	if(stack.size() != 1) {
-		LogError(Error, node.Location, "Stack error: too many parameters for loop condition");
+		Logger::Log(Error, node.Location, "Stack error: too many parameters for loop condition");
 	}
 	buffer << "repeat ";
 	visit(node.Body, true);
@@ -282,7 +282,7 @@ void Converter::visit(const LoopStatement& node) {
 }
 
 void Converter::visit(const DoLoopStatement& node) {
-	LogError(Error, node.Location, "Not implemented");
+	Logger::Log(Error, node.Location, "Not implemented");
 }
 
 void Converter::visit(const IfStatement& node) {
@@ -291,9 +291,9 @@ void Converter::visit(const IfStatement& node) {
 	buffer << "if(";
 	visit(node.Condition, false);
 	if(stack.empty()) {
-		LogError(Error, node.Location, "Missing parameter for if condition");
+		Logger::Log(Error, node.Location, "Missing parameter for if condition");
 	} else if(stack.size() > 1) {
-		LogError(Error, node.Location, "Too many parameters for if condition");
+		Logger::Log(Error, node.Location, "Too many parameters for if condition");
 	}
 	buffer << ")";
 	stack.pop();
@@ -335,10 +335,10 @@ void Converter::visit(const Scope& node) {
 
 void Converter::visit(LetStatement& node) {
 	if(node.TokenType == Tokentype::Const) {
-		LogError(Error, node.Location, "Input variable only allowed at root level");
+		Logger::Log(Error, node.Location, "Input variable only allowed at root level");
 	}
 	if(node.TokenType == Tokentype::Var) {
-		LogError(Warning, node.Location, "Prefer declaring global variables with let on root level");
+		Logger::Log(Warning, node.Location, "Prefer declaring global variables with let on root level");
 	}
 
 	auto& scope = scopes.back();
@@ -348,7 +348,7 @@ void Converter::visit(LetStatement& node) {
 			visit(item.Value, false);
 
 			if(stack.size() != item.Names.size()) {
-				LogError(Error, node.Location, "Right side of assign returns wrong amount of parameters");
+				Logger::Log(Error, node.Location, "Right side of assign returns wrong amount of parameters");
 				while(!stack.empty()) {
 					stack.pop();
 				}
@@ -357,11 +357,11 @@ void Converter::visit(LetStatement& node) {
 					const auto& name = item.Names[i];
 					ScopeItem el;
 					if(scope.count(name)) {
-						LogError(Error, item.Location, "Local variable " + name + " has already been declared");
+						Logger::Log(Error, item.Location, "Local variable " + name + " has already been declared");
 						continue;
 					}
 					if(findVar(name)) {
-						LogError(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
+						Logger::Log(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
 						el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
 					} else {
 						el.Codename = name;
@@ -383,11 +383,11 @@ void Converter::visit(LetStatement& node) {
 				const auto& name = item.Names[i];
 				ScopeItem el;
 				if(scope.count(name)) {
-					LogError(Error, item.Location, "Local variable " + name + " has already been declared");
+					Logger::Log(Error, item.Location, "Local variable " + name + " has already been declared");
 					continue;
 				}
 				if(findVar(name)) {
-					LogError(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
+					Logger::Log(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
 					el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
 				} else {
 					el.Codename = name;
@@ -405,16 +405,16 @@ void Converter::visit(LetStatement& node) {
 }
 
 void Converter::visit(const FunctionDecl& node) {
-	LogError(Error, node.Location, "Nested functions not allowed");
+	Logger::Log(Error, node.Location, "Nested functions not allowed");
 }
 
 void Converter::visit(const SelectExpression& node, bool discard) {
 	const size_t startStack = stack.size();
 	visit(node.Condition, false);
 	if(stack.size() - startStack == 0) {
-		LogError(Error, node.Location, "");
+		Logger::Log(Error, node.Location, "");
 	} else if(stack.size() - startStack > 1) {
-		LogError(Error, node.Location, "");
+		Logger::Log(Error, node.Location, "");
 	}
 	buffer << "if ";
 	while(stack.size() > startStack) {
@@ -431,7 +431,7 @@ void Converter::visit(const SelectExpression& node, bool discard) {
 	visit(node.False, discard);
 	const size_t rCount = stack.size() - startStack;
 	if(lCount != rCount) {
-		LogError(Error, node.Location, "Stack error: left and right side of ternary expression don't return the same amount of arguments");
+		Logger::Log(Error, node.Location, "Stack error: left and right side of ternary expression don't return the same amount of arguments");
 	}
 	buffer << "endif ";
 	if(discard) {
@@ -454,7 +454,7 @@ void Converter::visit(const PreExpression& node, bool discard) {
 	switch(node.Type) {
 		case Tokentype::Inc:
 		case Tokentype::Dec:
-			LogError(Error, node.Location, "++ and -- Currently not supported");
+			Logger::Log(Error, node.Location, "++ and -- Currently not supported");
 			break;
 		case Tokentype::Add: break;
 		case Tokentype::Sub: buffer << "neg ";
@@ -488,7 +488,7 @@ void Converter::visit(const PostExpression& node, bool discard) {
 			stack.pop();
 		}
 	} else {
-		LogError(Error, node.Location, "left side of post expression has to be variable");
+		Logger::Log(Error, node.Location, "left side of post expression has to be variable");
 	}
 }
 
@@ -498,9 +498,9 @@ void Converter::visit(const Operation& node, bool discard) {
 			auto startStack = stack.size();
 			visit(node.Right, false);
 			if(stack.size() - startStack == 0) {
-				LogError(Error, node.Location, "Right side of assign returns nothing");
+				Logger::Log(Error, node.Location, "Right side of assign returns nothing");
 			} else if(stack.size() - startStack > 1) {
-				LogError(Error, node.Location, "Right side of assign returns to many parameters");
+				Logger::Log(Error, node.Location, "Right side of assign returns to many parameters");
 			}
 
 			auto v = findVar(var->Name);
@@ -511,7 +511,7 @@ void Converter::visit(const Operation& node, bool discard) {
 				}
 				buffer << "->" << v->Codename << " ";
 			} else {
-				LogError(Error, node.Location, "Undefined variable " + var->Name);
+				Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
 			}
 			stack.pop();
 			return;
@@ -541,7 +541,7 @@ void Converter::visit(const Operation& node, bool discard) {
 
 					return;
 				} else {
-					LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
+					Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
 					return;
 				}
 			}
@@ -551,7 +551,7 @@ void Converter::visit(const Operation& node, bool discard) {
 			visit(node.Right, false);
 
 			if(stack.size() != asd->Elements.size()) {
-				LogError(Error, node.Location, "Left side of multi assign has to have same amount of elements as right side");
+				Logger::Log(Error, node.Location, "Left side of multi assign has to have same amount of elements as right side");
 			}
 
 			for(int i = asd->Elements.size() - 1; i >= 0; i--) {
@@ -561,17 +561,17 @@ void Converter::visit(const Operation& node, bool discard) {
 					if(v) {
 						buffer << "->" << v->Codename << " ";
 					} else {
-						LogError(Error, node.Location, "Undefined variable " + var->Name);
+						Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
 					}
 					stack.pop();
 				} else {
-					LogError(Error, var->Location, "Left side of multi assign has to be variable");
+					Logger::Log(Error, var->Location, "Left side of multi assign has to be variable");
 				}
 			}
 
 			return;
 		}
-		LogError(Error, node.Location, "Left side of an assign has to be a variable");
+		Logger::Log(Error, node.Location, "Left side of an assign has to be a variable");
 		return;
 	}
 
@@ -586,17 +586,17 @@ void Converter::visit(const Operation& node, bool discard) {
 	int stackStart = stack.size();
 	visit(node.Left, false);
 	if(stack.size() - stackStart == 0) {
-		LogError(Error, node.Left->Location, "left side of operation returns no arguments");
+		Logger::Log(Error, node.Left->Location, "left side of operation returns no arguments");
 	} else if(stack.size() - stackStart > 1) {
-		LogError(Error, node.Left->Location, "left side of operation returns too many arguments");
+		Logger::Log(Error, node.Left->Location, "left side of operation returns too many arguments");
 	}
 
 	stackStart = stack.size();
 	visit(node.Right, false);
 	if(stack.size() - stackStart == 0) {
-		LogError(Error, node.Left->Location, "right side of operation returns no arguments");
+		Logger::Log(Error, node.Left->Location, "right side of operation returns no arguments");
 	} else if(stack.size() - stackStart > 1) {
-		LogError(Error, node.Left->Location, "right side of operation returns too many arguments");
+		Logger::Log(Error, node.Left->Location, "right side of operation returns too many arguments");
 	}
 
 	switch(node.Type) {
@@ -641,7 +641,7 @@ void Converter::visit(const Operation& node, bool discard) {
 			stack.pop();
 			if((l != unknown && l & Types::String) || (r != unknown && r & Types::String)) {
 				buffer << "concat ";
-				LogError(Warning, node.Location, "Use template strings instead of addition");
+				Logger::Log(Warning, node.Location, "Use template strings instead of addition");
 				stack.pop();
 				stack.pop();
 				stack.push(Types::String);
@@ -653,7 +653,7 @@ void Converter::visit(const Operation& node, bool discard) {
 		}
 		case Tokentype::LBracket:
 			if(!dynamic_cast<Variable*>(node.Left)) {
-				LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
+				Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
 			}
 			buffer << "GetListElement ";
 			break;
@@ -666,7 +666,7 @@ void Converter::visit(const Operation& node, bool discard) {
 void Converter::visit(const FunctionCall& node, bool discard) {
 	auto var = dynamic_cast<Variable*>(node.Left);
 	if(!var) {
-		LogError(Error, node.Location, "Left side of function call has to be function name");
+		Logger::Log(Error, node.Location, "Left side of function call has to be function name");
 		return;
 	}
 
@@ -688,9 +688,9 @@ void Converter::visit(const FunctionCall& node, bool discard) {
 		auto& func = *functions[var->Name];
 
 		if(count < func.Params.size()) {
-			LogError(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
 		} else if(count > func.Params.size()) {
-			LogError(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
 		}
 		for(int i = 0; i < count; i++) {
 			stack.pop();
@@ -708,9 +708,9 @@ void Converter::visit(const FunctionCall& node, bool discard) {
 	} else if(nativeVars.count(var->Name)) {
 		auto& func = nativeVars[var->Name];
 		if(count < func.consumes.size()) {
-			LogError(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
 		} else if(count > func.consumes.size()) {
-			LogError(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
 		} else {
 			// Check of elements on stack are of correct type
 			for(int i = func.consumes.size() - 1; i >= 0; i--) {
@@ -719,7 +719,7 @@ void Converter::visit(const FunctionCall& node, bool discard) {
 				stack.pop();
 
 				if(!(actual & expected)) {
-					LogError(Warning, node.Location, "parameter type might be wrong");
+					Logger::Log(Warning, node.Location, "parameter type might be wrong");
 				}
 			}
 		}
@@ -732,7 +732,7 @@ void Converter::visit(const FunctionCall& node, bool discard) {
 			}
 		}
 	} else {
-		LogError(Error, var->Location, "Unknown function \"" + var->Name + '"');
+		Logger::Log(Error, var->Location, "Unknown function \"" + var->Name + '"');
 	}
 }
 
@@ -783,9 +783,9 @@ void Converter::visit(const ArrayLit& node, bool discard) {
 			buffer << "dup ";
 			visit(element, false);
 			if(stack.size() - startStack == 0) {
-				LogError(Warning, element->Location, "array element returns no elements");
+				Logger::Log(Warning, element->Location, "array element returns no elements");
 			} else if(stack.size() - startStack > 1) {
-				LogError(Warning, element->Location, "array element returns multiple elements");
+				Logger::Log(Warning, element->Location, "array element returns multiple elements");
 			}
 			while(stack.size() > startStack) {
 				buffer << "AppendToList ";
@@ -808,7 +808,7 @@ void Converter::visit(const Variable& node, bool discard) {
 			auto var = nativeVars[node.Name];
 			buffer << node.Name << " ";
 			if(!var.consumes.empty()) {
-				LogError(Error, node.Location, node.Name + " is a function and not a variable");
+				Logger::Log(Error, node.Location, node.Name + " is a function and not a variable");
 			}
 			// Push all returns onto the stack
 			for(const auto t : var.returns) {
@@ -819,7 +819,7 @@ void Converter::visit(const Variable& node, bool discard) {
 				buffer << "ClearStack ";
 			}
 		} else {
-			LogError(Error, node.Location, "Undefined variable " + node.Name);
+			Logger::Log(Error, node.Location, "Undefined variable " + node.Name);
 		}
 	}
 }
@@ -835,7 +835,7 @@ static int CountReturn(Statement* node) {
 				continue;
 			}
 			if(count != val) {
-				LogError(Error, i->Location, "Function always has to return the same amount of parameters");
+				Logger::Log(Error, i->Location, "Function always has to return the same amount of parameters");
 			}
 		}
 		return count;
@@ -853,7 +853,7 @@ static int CountReturn(Statement* node) {
 			if(count == -1) {
 				count = v;
 			} else if(v != -1 && count != v) {
-				LogError(Error, ifs->Else->Location, "Function always has to return the same amount of parameters");
+				Logger::Log(Error, ifs->Else->Location, "Function always has to return the same amount of parameters");
 			}
 		}
 		return count;
@@ -877,12 +877,12 @@ void Converter::visitFunctionDecl(const FunctionDecl& node) {
 		auto& param = node.Params[i];
 
 		if(scope.count(param.Name)) {
-			LogError(Error, node.Location, "Local variable " + param.Name + " has already been declared");
+			Logger::Log(Error, node.Location, "Local variable " + param.Name + " has already been declared");
 			continue;
 		}
 		ScopeItem el;
 		if(findVar(param.Name)) {
-			LogError(Warning, node.Location, "Declaration of '" + param.Name + "' hides previous local declaration");
+			Logger::Log(Warning, node.Location, "Declaration of '" + param.Name + "' hides previous local declaration");
 			el.Codename = param.Name + "_" + std::to_string(node.Location.line) + "_" + std::to_string(node.Location.column);
 		} else {
 			el.Codename = param.Name;
@@ -928,10 +928,10 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 			func->ReturnCount = count;
 
 			if(nativeVars.count(func->Name)) {
-				LogError(Error, node->Location, "Native function with same name already exists");
+				Logger::Log(Error, node->Location, "Native function with same name already exists");
 			}
 			if(cnvrt.functions.count(func->Name)) {
-				LogError(Error, node->Location, "function \"" + func->Name + "\" exists multiple times");
+				Logger::Log(Error, node->Location, "function \"" + func->Name + "\" exists multiple times");
 			}
 			cnvrt.functions[func->Name] = func;
 			continue;
@@ -940,7 +940,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 			if(var->TokenType == Tokentype::Const) {
 				for(LetItem& item : var->Items) {
 					if(item.Names.size() != 1) {
-						LogError(Error, item.Location, "Cannot have multi declaration for input variables");
+						Logger::Log(Error, item.Location, "Cannot have multi declaration for input variables");
 					}
 
 
@@ -955,11 +955,11 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 							cnvrt.buffer << "-";
 							cnvrt.visit(op->Right, false);
 						} else {
-							LogError(Error, var->Location, "Right site of input variable has to be simple constant");
+							Logger::Log(Error, var->Location, "Right site of input variable has to be simple constant");
 							cnvrt.stack.push(Types::unknown);
 						}
 					} else {
-						LogError(Error, var->Location, "Right site of input variable has to be simple constant");
+						Logger::Log(Error, var->Location, "Right site of input variable has to be simple constant");
 						cnvrt.stack.push(Types::unknown);
 					}
 
@@ -973,7 +973,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 	}
 
 	if(!main) {
-		LogError(Error, fileName, "No main function found");
+		Logger::Log(Error, fileName, "No main function found");
 	}
 
 	if(count != 0) {

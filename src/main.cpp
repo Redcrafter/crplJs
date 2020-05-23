@@ -15,14 +15,15 @@ int main(int argc, char** argv) {
 	#endif
 
 	if(argc == 1) {
-		LogGlobalError(FatalError, "no input files");
+		Logger::LogGlobal(FatalError, "no input files");
+		return 1;
 	} else {
 		std::vector<std::string> files;
 		for(int i = 1; i < argc; ++i) {
 			std::string file = argv[i];
 			
 			if(!fs::is_regular_file(file)) {
-				LogGlobalError(Error, file + ": No such file or directory");
+				Logger::LogGlobal(Error, file + ": No such file or directory");
 				return 1;
 			}
 			
@@ -40,7 +41,7 @@ int main(int argc, char** argv) {
 
 			auto result = crpl(ast, path);
 
-			if(!getError()) {
+			if(!Logger::getError()) {
 				std::string filename = path.substr(path.find_last_of("/\\") + 1);
 				filename = filename.substr(0, filename.find_last_of('.'));
 				
