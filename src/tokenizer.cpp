@@ -122,7 +122,11 @@ std::vector<Token> tokenize(const std::string& fileName) {
 	int isInTemp = 0;
 	
     auto skip = [&] {
-        if (currentChar == '\n') {
+        if(currentChar == -1) {
+            // TODO: replace runtime_error
+            // Logger::Log(Error, loc, "Unexpected <EOF>");
+			throw std::runtime_error("Unexpected <EOF>");
+    	} else if (currentChar == '\n') {
             loc.line++;
             loc.column = 1;
         } else {

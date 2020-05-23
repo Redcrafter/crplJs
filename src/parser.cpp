@@ -255,125 +255,127 @@ Expression* Parser::ParseSelect() {
 
 Expression* Parser::ParseLor() {
     auto location = CurrentToken.location;
-    auto left = ParseLand();
-    if (CurrentToken.type == Tokentype::LOr) {
+    auto current = ParseLand();
+    while (CurrentToken.type == Tokentype::LOr) {
         acceptIt();
-        return new Operation(location, Tokentype::LOr, left, ParseLor());
+        current = new Operation(location, Tokentype::LOr, current, ParseLand());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseLand() {
     auto location = CurrentToken.location;
-    auto left = ParseNullCoal();
-    if (CurrentToken.type == Tokentype::LAnd) {
+    auto current = ParseNullCoal();
+    while (CurrentToken.type == Tokentype::LAnd) {
         acceptIt();
-        return new Operation(location, Tokentype::LAnd, left, ParseLand());
+        current = new Operation(location, Tokentype::LAnd, current, ParseNullCoal());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseNullCoal() {
     auto location = CurrentToken.location;
-    auto left = ParseOr();
-    if (CurrentToken.type == Tokentype::NullCoal) {
+    auto current = ParseOr();
+    while (CurrentToken.type == Tokentype::NullCoal) {
         acceptIt();
-        return new Operation(location, Tokentype::NullCoal, left, ParseNullCoal());
+        current = new Operation(location, Tokentype::NullCoal, current, ParseOr());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseOr() {
     auto location = CurrentToken.location;
-    auto left = ParseXor();
-    if (CurrentToken.type == Tokentype::Or) {
+    auto current = ParseXor();
+    while (CurrentToken.type == Tokentype::Or) {
         acceptIt();
-        return new Operation(location, Tokentype::Or, left, ParseOr());
+        return new Operation(location, Tokentype::Or, current, ParseXor());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseXor() {
     auto location = CurrentToken.location;
-    auto left = ParseAnd();
-    if (CurrentToken.type == Tokentype::Xor) {
+    auto current = ParseAnd();
+    while (CurrentToken.type == Tokentype::Xor) {
         acceptIt();
-        return new Operation(location, Tokentype::Xor, left, ParseXor());
+        current = new Operation(location, Tokentype::Xor, current, ParseAnd());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseAnd() {
     auto location = CurrentToken.location;
-    auto left = ParseEq();
-    if (CurrentToken.type == Tokentype::And) {
+    auto current = ParseEq();
+    while (CurrentToken.type == Tokentype::And) {
         acceptIt();
-        return new Operation(location, Tokentype::And, left, ParseAnd());
+        current = new Operation(location, Tokentype::And, current, ParseEq());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseEq() {
     auto location = CurrentToken.location;
-    auto left = ParseComp();
-    if (CurrentToken.type == Tokentype::Equals ||
+    auto current = ParseComp();
+    while (CurrentToken.type == Tokentype::Equals ||
         CurrentToken.type == Tokentype::NEquals) {
         auto t = CurrentToken.type;
         acceptIt();
-        return new Operation(location, t, left, ParseEq());
+        current = new Operation(location, t, current, ParseComp());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseComp() {
     auto location = CurrentToken.location;
-    auto left = ParseShift();
-    if (CurrentToken.type == Tokentype::Less ||
+    auto current = ParseShift();
+    while (CurrentToken.type == Tokentype::Less ||
         CurrentToken.type == Tokentype::LessEq ||
         CurrentToken.type == Tokentype::Greater ||
         CurrentToken.type == Tokentype::GreaterEq) {
         auto t = CurrentToken.type;
         acceptIt();
-        return new Operation(location, t, left, ParseComp());
+        current = new Operation(location, t, current, ParseShift());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseShift() {
     auto location = CurrentToken.location;
-    auto left = ParseAdd();
-    if (CurrentToken.type == Tokentype::LShift ||
+    auto current = ParseAdd();
+    while (CurrentToken.type == Tokentype::LShift ||
         CurrentToken.type == Tokentype::RShift) {
         auto t = CurrentToken.type;
         acceptIt();
-        return new Operation(location, t, left, ParseShift());
+        current = new Operation(location, t, current, ParseAdd());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseAdd() {
     auto location = CurrentToken.location;
-    auto left = ParseMul();
-    if (CurrentToken.type == Tokentype::Add ||
+    auto current = ParseMul();
+    while (CurrentToken.type == Tokentype::Add ||
         CurrentToken.type == Tokentype::Sub) {
         auto t = CurrentToken.type;
         acceptIt();
-        return new Operation(location, t, left, ParseAdd());
+
+        current = new Operation(location, t, current, ParseMul());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParseMul() {
     auto location = CurrentToken.location;
-    auto left = ParsePrefix();
-    if (CurrentToken.type == Tokentype::Mul ||
+    auto current = ParsePrefix();
+    while (CurrentToken.type == Tokentype::Mul ||
         CurrentToken.type == Tokentype::Div ||
         CurrentToken.type == Tokentype::Mod) {
         auto t = CurrentToken.type;
         acceptIt();
-        return new Operation(location, t, left, ParseComp());
+
+        current = new Operation(location, t, current, ParsePrefix());
     }
-    return left;
+    return current;
 }
 
 Expression* Parser::ParsePrefix() {
