@@ -45,8 +45,45 @@ declare function SetScriptVar(self, scriptName: string, varName: string, value):
 
 declare function SetUnitAttribute(self, name, value): void;
 
-declare function SetImage(self, name: string, ehh: string): void;
+declare function SetImage(self, name: string, imageName: string): void;
 declare function SetImageScale(self, name: string, scaleX: number, scaleY: number): void;
 declare function SetImageColor(self, name: string, red: number, green: number, blue: number, alpha: number): void;
 
-declare function Delay(time: number);
+declare function delay(time: number);
+
+
+//#region Movement Commands
+declare function QueueMove(x: number, y: number, speed: number): void;
+declare function GetQueuedMoveCount(): number;
+declare function AbortMove(): void;
+declare function SuspendMove(frames: number): void;
+declare function ClearQueuedMoves(): void;
+declare function GetTargetOffsetX(): number;
+declare function GetTargetOffsetY(): number;
+declare function SetTargetOffsetX(x: number): void;
+declare function SetTargetOffsetY(y: number): void;
+declare function GetUnitTargetOffsetX(uid: number): number;
+declare function GetUnitTargetOffsetY(uid: number): number;
+declare function SetUnitTargetOffsetX(uid: number, x: number): void;
+declare function SetUnitTargetOffsetY(uid: number, y: number): void;
+//#endregion
+
+declare function GetMouseButton(id: 0 | 1 | 2): boolean;
+
+declare function SetCreeper(x: number, y: number, amt: number): void;
+
+//#region Terrain and Wall Commands
+declare function GetTerrain(x: number, y: number): number;
+declare function SetTerrain(x: number, y: number, height: number): void;
+declare function GetTerrainOverride(x: number, y: number): number;
+declare function SetTerrainOverride(x: number, y: number, height: number): void;
+declare function GetWall(x: number, y: number): number;
+declare function SetWall(x: number, y: number, amt: boolean): void;
+declare function GetVoid(x: number, y: number): number;
+declare function SetVoid(x: number, y: number): void;
+declare function IsTerrainLOS(x1: number, y1: number, x2: number, y2: number): boolean;
+declare function FloodFillTerrain(x: number, y: number, minHeight: number, maxHeight: number, avoidOccupied: boolean, fullCellsOnly: boolean, maxSize: number): number[];
+declare function PathFindTerrain(x1: number, y1: number, x2: number, y2: number, minHeight: number, maxHeight: number, avoidOccupied: boolean, fullCellsOnly): number[];
+//#endregion
+
+// declare function GetMousePosition(): number;

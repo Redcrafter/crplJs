@@ -6,6 +6,19 @@
 
 class Converter;
 
+enum Types {
+	// Void = 0,
+	Int = 1, Boolean = Int,
+	Float = 2,
+	String = 4,
+	List = 8,
+
+	Number = Int | Float,
+	StringNum = String | Number,
+
+	unknown = 0xFF,
+};
+
 struct AstNode {
     SourceLocation Location;
 
@@ -14,7 +27,7 @@ struct AstNode {
     AstNode(AstNode&& o) noexcept : Location(o.Location) {}
 	virtual ~AstNode() { };
 
-    virtual void visit(Converter& converter, bool discard) const = 0;
+    virtual void visit(Converter& converter, bool discard) = 0;
 };
 
 struct Statement : AstNode {
@@ -27,12 +40,12 @@ struct Expression : Statement {
 
 #pragma region Statements
 struct ReturnStatement : Statement {
-    Expression* ReturnValue;
+    std::vector<Expression*> ReturnValues;
 
-    ReturnStatement(const SourceLocation location, Expression* returnValue) : Statement(location), ReturnValue(returnValue) {}
-    ~ReturnStatement() { delete ReturnValue; }
+    ReturnStatement(const SourceLocation location, const std::vector<Expression*>& returnValues) : Statement(location), ReturnValues(returnValues) {}
+    ~ReturnStatement() { for (auto item : ReturnValues) { delete item; } }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 
 struct LoopStatement : Statement {
@@ -49,7 +62,7 @@ struct LoopStatement : Statement {
         delete Body;
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 
 struct DoLoopStatement : Statement {
@@ -64,7 +77,7 @@ struct DoLoopStatement : Statement {
         delete Body;
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct IfStatement : Statement {
     Expression* Condition;
@@ -79,12 +92,12 @@ struct IfStatement : Statement {
         delete Else;
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct Scope : Statement {
     std::vector<Statement*> Body;
 
-    Scope(const SourceLocation location, std::vector<Statement*> body) : Statement(location), Body(body) {}
+    Scope(const SourceLocation location, const std::vector<Statement*>& body) : Statement(location), Body(body) {}
 
     ~Scope() {
         for (auto i : Body) {
@@ -92,23 +105,33 @@ struct Scope : Statement {
         }
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
+};
+
+struct LetItem {
+	SourceLocation Location;
+	
+	std::vector<std::string> Names;
+	Expression* Value = nullptr;;
+
+	LetItem(LetItem&& other) {
+		this->Location = other.Location;
+		this->Names = std::move(other.Names);
+		this->Value = other.Value;
+		other.Value = nullptr;
+	}
+	LetItem() { }
+	LetItem(const SourceLocation location, const std::vector<std::string>& names, Expression* value) : Location(location), Names(names), Value(value) { }
+	LetItem(const LetItem&) = delete;
+	~LetItem() { delete Value; }
 };
 struct LetStatement : Statement {
-    Tokentype Type;
-    std::string Name;
-    Expression* Value = nullptr;
+    Tokentype TokenType;
+	std::vector<LetItem> Items;
 
-    LetStatement(const SourceLocation location, Tokentype type, std::string name, Expression* value) : Statement(location), Type(type), Name(name), Value(value) {}
-    ~LetStatement() { delete Value; }
-
-    std::string getName() const {
-        if(Type == Tokentype::Const) {
-            return Name;
-        }
-        return Name + "_" + std::to_string(Location.line) + "_" + std::to_string(Location.column);
-    }
-    void visit(Converter& converter, bool discard) const;
+	LetStatement(const SourceLocation location, Tokentype type, std::vector<LetItem>& items) : Statement(location), TokenType(type), Items(std::move(items)) { }
+	
+    void visit(Converter& converter, bool discard);
 };
 struct Param {
     std::string Name;
@@ -119,12 +142,14 @@ struct Param {
 struct FunctionDecl : Statement {
     std::string Name;
     std::vector<Param> Params;
+    int ReturnCount = 0;
+    // std::vector<Types> ReturnTypes;
     Scope* Body;
 
-    FunctionDecl(const SourceLocation location, std::string name, std::vector<Param> params, Scope* body) : Statement(location), Name(name), Params(params), Body(body) {}
+    FunctionDecl(const SourceLocation location, std::string name, const std::vector<Param>& params, Scope* body) : Statement(location), Name(name), Params(params), Body(body) {}
     ~FunctionDecl() { delete Body; }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 #pragma endregion
 
@@ -141,7 +166,7 @@ struct SelectExpression : Expression {
         delete False;
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct PreExpression : Expression {
     Tokentype Type;
@@ -150,7 +175,7 @@ struct PreExpression : Expression {
     PreExpression(const SourceLocation location, Tokentype type, Expression* left) : Expression(location), Type(type), Right(left) {}
     ~PreExpression() { delete Right; }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct PostExpression : Expression {
     Tokentype Type;
@@ -159,7 +184,7 @@ struct PostExpression : Expression {
     PostExpression(const SourceLocation location, Tokentype type, Expression* right) : Expression(location), Type(type), Left(right) {}
     ~PostExpression() { delete Left; }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct Operation : Expression {
     Tokentype Type;
@@ -172,13 +197,13 @@ struct Operation : Expression {
         delete Right;
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct FunctionCall : Expression {
     Expression* Left;
     std::vector<Expression*> Params;
 
-    FunctionCall(const SourceLocation location, Expression* left, std::vector<Expression*> params) : Expression(location), Left(left), Params(std::move(params)) {}
+    FunctionCall(const SourceLocation location, Expression* left, const std::vector<Expression*>& params) : Expression(location), Left(left), Params(params) {}
     ~FunctionCall() {
         delete Left;
         for (auto el : Params) {
@@ -186,49 +211,49 @@ struct FunctionCall : Expression {
         }
     }
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 
 struct IntLit : Expression {
     int64_t Value;
     IntLit(const SourceLocation location, int64_t value) : Expression(location), Value(value) {}
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct FloatLit : Expression {
     double Value;
     FloatLit(const SourceLocation location, double value) : Expression(location), Value(value) {}
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct StringLit : Expression {
     std::string Value;
     StringLit(const SourceLocation location, std::string value) : Expression(location), Value(value) {}
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct BoolLit : Expression {
     bool Value;
     BoolLit(const SourceLocation location, bool value) : Expression(location), Value(value) {}
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct ArrayLit: Expression {
     std::vector<Expression*> Elements;
 
-    ArrayLit(const SourceLocation location, std::vector<Expression*> elements): Expression(location), Elements(elements) {}
+    ArrayLit(const SourceLocation location, const std::vector<Expression*>& elements): Expression(location), Elements(elements) {}
     ~ArrayLit() {
         for (auto i : Elements) {
             delete i;
         }
     }
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 struct Variable : Expression {
     std::string Name;
     Variable(const SourceLocation location, std::string name) : Expression(location), Name(name) {}
 
-    void visit(Converter& converter, bool discard) const;
+    void visit(Converter& converter, bool discard);
 };
 #pragma endregion
 

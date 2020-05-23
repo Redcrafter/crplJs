@@ -114,7 +114,7 @@ static char escapeChar(SourceLocation loc, char c) {
 
 std::vector<Token> tokenize(const std::string& fileName) {
     SourceLocation loc{fileName,  1, 1};
-	std::ifstream file(fileName, std::ios::in, std::ios::binary);
+	std::ifstream file(fileName, std::ios::in | std::ios::binary);
 
 	std::vector<Token> tokens;
     std::string spelling;

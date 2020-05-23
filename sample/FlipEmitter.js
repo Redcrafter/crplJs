@@ -17,17 +17,17 @@ const Empowerment = 1;
 const EmpowermentAC = 1;
 const Unstopped = 1;
 
-var Cvar = 1;
-var ACvar = 1;
+let Cvar = 1;
+let ACvar = 1;
 // Initialize the state as creeper or AC.
-var state = startState;
+let state = startState;
 awake();
 delay(4);
-var tAmount = ACamt;
-var TotalPower = 1;
-var EmissionBonus = 0;
-var NegaPower = 0; // ?
-var multi = false;
+let tAmount = ACamt;
+let TotalPower = 1;
+let EmissionBonus = 0;
+let NegaPower = 0; // ?
+let multi = false;
 
 function main() {
     if (GetGameTimeFrames() > Startdelay) {

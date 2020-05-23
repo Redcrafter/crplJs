@@ -6,7 +6,7 @@ To compile files specify them via the command line.\
 Outputs will be created with the same file name and a .crpl extension
 
 ### Windows
-Download the program from the release section. Or compile it yourself using CMake\
+Download the program from the release section. Or compile it yourself using CMake
 ```
 crpl.exe foo.js bar.js
 ```
@@ -45,8 +45,18 @@ String concatenation should be done through template template strings or the `co
 or\
 `"Hello " + var + " world!"`-> `"Hello " <-var " world!" concat concat`
 
-Another thing to watch out for is the amount of parameters a function requires and returns.\
-For example `CurrentCoords` returns 2 parameters.
+Functions work as expected except that you can return multiple elements.
+```js
+function foo(bar) {
+    return bar, 10; // returns bar and 10
+}
+```
+
+For functions like these multiple variables can be declared/assigned at the same time.
+```js
+let [x, y] = CurrentCoords();
+[x, y] = CurrentCoords();
+```
 
 # TODO
 Add all native functions\

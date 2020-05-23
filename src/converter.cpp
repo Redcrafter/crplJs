@@ -1,6 +1,7 @@
 #include "logger.h"
 #include "converter.h"
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <sstream>
@@ -8,183 +9,223 @@
 #include <cassert>
 
 struct NativeVar {
-	int consumes;
-	int returns;
+	std::vector<Types> consumes;
+	std::vector<Types> returns;
 };
+
+// TODO: eq0 neq0
 
 std::map<std::string, NativeVar> nativeVars = {
 	// "I", "J", "K"
-	{"CurrentCoords", {0, 2}},
-	{"CONST_ACPACKETREQUESTDELAY", {0, 1}},
-	{"CONST_AMMO", {0, 1}},
-	{"CONST_AMMOAC", {0, 1}},
-	{"CONST_BEAMTARGET", {0, 1}},
-	{"CONST_BUILDCOST", {0, 1}},
-	{"CONST_CANREQUESTAMMO", {0, 1}},
-	{"CONST_CELLHEIGHT", {0, 1}},
-	{"CONST_CELLWIDTH", {0, 1}},
-	{"CONST_CONNECTABLE", {0, 1}},
-	{"CONST_COORDX", {0, 1}},
-	{"CONST_COORDY", {0, 1}},
-	{"CONST_COUNTSFORVICTORY", {0, 1}},
-	{"CONST_CREATEPZ", {0, 1}},
-	{"CONST_DESTROYMODE", {0, 1}},
-	{"CONST_DESTROYONDAMAGE", {0, 1}},
-	{"CONST_HEALRATE", {0, 1}},
-	{"CONST_HEALTH", {0, 1}},
-	{"CONST_ISBUILDING", {0, 1}},
-	{"CONST_ISDESTROYED", {0, 1}},
-	{"CONST_ISLANDED", {0, 1}},
-	{"CONST_MAXAMMO", {0, 1}},
-	{"CONST_MAXAMMOAC", {0, 1}},
-	{"CONST_MAXHEALTH", {0, 1}},
-	{"CONST_NULLIFIERDAMAGEAMT", {0, 1}},
-	{"CONST_NULLIFIERDAMAGES", {0, 1}},
-	{"CONST_PACKETREQUESTDELAY", {0, 1}},
-	{"CONST_PIXELCOORDX", {0, 1}},
-	{"CONST_PIXELCOORDY", {0, 1}},
-	{"CONST_REQUESTACPACKETS", {0, 1}},
-	{"CONST_REQUESTPACKETS", {0, 1}},
-	{"CONST_SHOWAMMOACBAR", {0, 1}},
-	{"CONST_SHOWAMMOBAR", {0, 1}},
-	{"CONST_SHOWHEALTHBAR", {0, 1}},
-	{"CONST_SNIPERTARGET", {0, 1}},
-	{"CONST_SNIPERIGNORELOS", {0, 1}},
-	{"CONST_SUPPORTSDIGITALIS", {0, 1}},
-	{"CONST_TAKEMAPSPACE", {0, 1}},
-	{"CONST_THORTARGET", {0, 1}},
+	{"CONST_ACPACKETREQUESTDELAY", {{}, {Types::String}}},
+	{"CONST_AMMO", {{}, {Types::String}}},
+	{"CONST_AMMOAC", {{}, {Types::String}}},
+	{"CONST_BEAMTARGET", {{}, {Types::String}}},
+	{"CONST_BUILDCOST", {{}, {Types::String}}},
+	{"CONST_CANREQUESTAMMO", {{}, {Types::String}}},
+	{"CONST_CELLHEIGHT", {{}, {Types::String}}},
+	{"CONST_CELLWIDTH", {{}, {Types::String}}},
+	{"CONST_CONNECTABLE", {{}, {Types::String}}},
+	{"CONST_COORDX", {{}, {Types::String}}},
+	{"CONST_COORDY", {{}, {Types::String}}},
+	{"CONST_COUNTSFORVICTORY", {{}, {Types::String}}},
+	{"CONST_CREATEPZ", {{}, {Types::String}}},
+	{"CONST_DESTROYMODE", {{}, {Types::String}}},
+	{"CONST_DESTROYONDAMAGE", {{}, {Types::String}}},
+	{"CONST_HEALRATE", {{}, {Types::String}}},
+	{"CONST_HEALTH", {{}, {Types::String}}},
+	{"CONST_ISBUILDING", {{}, {Types::String}}},
+	{"CONST_ISDESTROYED", {{}, {Types::String}}},
+	{"CONST_ISLANDED", {{}, {Types::String}}},
+	{"CONST_MAXAMMO", {{}, {Types::String}}},
+	{"CONST_MAXAMMOAC", {{}, {Types::String}}},
+	{"CONST_MAXHEALTH", {{}, {Types::String}}},
+	{"CONST_NULLIFIERDAMAGEAMT", {{}, {Types::String}}},
+	{"CONST_NULLIFIERDAMAGES", {{}, {Types::String}}},
+	{"CONST_PACKETREQUESTDELAY", {{}, {Types::String}}},
+	{"CONST_PIXELCOORDX", {{}, {Types::String}}},
+	{"CONST_PIXELCOORDY", {{}, {Types::String}}},
+	{"CONST_REQUESTACPACKETS", {{}, {Types::String}}},
+	{"CONST_REQUESTPACKETS", {{}, {Types::String}}},
+	{"CONST_SHOWAMMOACBAR", {{}, {Types::String}}},
+	{"CONST_SHOWAMMOBAR", {{}, {Types::String}}},
+	{"CONST_SHOWHEALTHBAR", {{}, {Types::String}}},
+	{"CONST_SNIPERTARGET", {{}, {Types::String}}},
+	{"CONST_SNIPERIGNORELOS", {{}, {Types::String}}},
+	{"CONST_SUPPORTSDIGITALIS", {{}, {Types::String}}},
+	{"CONST_TAKEMAPSPACE", {{}, {Types::String}}},
+	{"CONST_THORTARGET", {{}, {Types::String}}},
 
 	#pragma region Math Commands
-	{"abs", {1, 1}},
-	{"acos", {1, 1}},
-	{"approximately", {2, 1}},
-	{"asfloat", {1, 1}},
-	{"asin", {1, 1}},
-	{"asint", {1, 1}},
-	{"atan", {1, 1}},
-	{"atan2", {2, 1}},
-	{"ceil", {1, 1}},
-	{"cos", {1, 1}},
-	{"E", {0, 1}},
-	{"floor", {1, 1}},
-	{"ln", {1, 1}},
-	{"log", {2, 1}},
-	{"log10", {1, 1}},
-	{"max", {2, 1}},
-	{"min", {2, 1}},
-	{"PI", {0, 1}},
-	{"pow", {2, 1}},
-	{"round", {2, 1}},
-	{"ShortestAngle", {2, 1}},
-	{"sin", {1, 1}},
-	{"sqrt", {1, 1}},
-	{"tan", {1, 1}},
+	{"abs", {{Types::Number}, {Types::Number}}},
+	{"acos", {{Types::Number}, {Types::Number}}},
+	{"approximately", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"asfloat", {{Types::Number}, {Types::Float}}},
+	{"asin", {{Types::Number}, {Types::Number}}},
+	{"asint", {{Types::Number}, {Types::Number}}},
+	{"atan", {{Types::Number}, {Types::Number}}},
+	{"atan2", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"ceil", {{Types::Number}, {Types::Number}}},
+	{"cos", {{Types::Number}, {Types::Number}}},
+	{"E", {{}, {Types::Float}}},
+	{"floor", {{Types::Number}, {Types::Number}}},
+	{"ln", {{Types::Number}, {Types::Number}}},
+	{"log", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"log10", {{Types::Number}, {Types::Number}}},
+	{"max", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"min", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"PI", {{}, {Types::Float}}},
+	{"pow", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"round", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"ShortestAngle", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"sin", {{Types::Number}, {Types::Number}}},
+	{"sqrt", {{Types::Number}, {Types::Number}}},
+	{"tan", {{Types::Number}, {Types::Number}}},
 	#pragma endregion
 
-	{"delay", {1, 0}},
+	#pragma region Flow Control
+	{"delay", {{Types::Number}, {}}},
+	#pragma endregion
 
 	#pragma region Timers
-	{"GetTimer0", {0, 1}},
-	{"SetTimer0", {1, 0}},
-	{"GetTimer1", {0, 1}},
-	{"SetTimer1", {1, 0}},
-	{"GetTimer2", {0, 1}},
-	{"SetTimer2", {1, 0}},
-	{"GetTimer3", {0, 1}},
-	{"SetTimer3", {1, 0}},
+	{"GetTimer0", {{}, {Types::Number}}},
+	{"SetTimer0", {{Types::Number}, {}}},
+	{"GetTimer1", {{}, {Types::Number}}},
+	{"SetTimer1", {{Types::Number}, {}}},
+	{"GetTimer2", {{}, {Types::Number}}},
+	{"SetTimer2", {{Types::Number}, {}}},
+	{"GetTimer3", {{}, {Types::Number}}},
+	{"SetTimer3", {{Types::Number}, {}}},
 	#pragma endregion
 
 	#pragma region String Commands
-	{"Concat", {2,1}},
-	{"Substring", {3,1}},
-	{"StartsWith", {2,1}},
-	{"EndsWith", {2,1}},
-	{"Split", {2,1}},
-	{"StringToList", {1,1}},
-	{"ToUpper", {1,1}},
-	{"ToLower", {1,1}},
-	{"StringLength", {1,1}},
-	{"StringReplace", {3,1}},
+	{"Concat", {{Types::StringNum, Types::StringNum}, {Types::String}}},
+	{"Substring", {{Types::String, Types::Number, Types::Number}, {Types::String}}},
+	{"StartsWith", {{Types::String, Types::String}, {Types::Boolean}}},
+	{"EndsWith", {{Types::String, Types::String}, {Types::Boolean}}},
+	{"Split", {{Types::String, Types::String}, {Types::List}}},
+	{"StringToList", {{Types::String}, {Types::List}}},
+	{"ToUpper", {{Types::String}, {Types::String}}},
+	{"ToLower", {{Types::String}, {Types::String}}},
+	{"StringLength", {{Types::String}, {Types::Int}}},
+	{"StringReplace", {{Types::String, Types::String, Types::String}, {Types::String}}},
 	#pragma endregion
 
 	#pragma region Input Commands
-	{"GetKey", {1, 1}},
-	{"GetKeyDown", {1, 1}},
-	{"GetMouseButton", {1, 1}},
-	{"GetMouseButtonDown", {1, 1}},
-	{"GetMousePosition", {0, 2}},
-	{"GetMouseScreenPosition", {0, 2}},
-	{"EnableAlternateControlMode", {1, 0}},
-	{"EnableNormalMouse", {1, 0}},
-	{"GetKeyUp", {1, 1}},
-	{"GetMouseButtonUp", {1, 1}},
-	{"GetMouseCell", {0, 2}},
-	{"GetMouseScreenPixelPosition", {0, 2}},
-	{"EnableNormalKeyInput", {1, 0}},
+	{"GetKey", {{Types::String}, {Types::Boolean}}},
+	{"GetKeyDown", {{Types::String}, {Types::Boolean}}},
+	{"GetKeyUp", {{Types::String}, {Types::Boolean}}},
+	{"GetMouseButton", {{Types::Int}, {Types::Boolean}}},
+	{"GetMouseButtonDown", {{Types::Int}, {Types::Boolean}}},
+	{"GetMouseButtonUp", {{Types::Int}, {Types::Boolean}}},
+	{"GetMousePosition", {{}, {Types::Float, Types::Float}}},
+	{"GetMouseCell", {{}, {Types::Int, Types::Int}}},
+	{"GetMouseScreenPosition", {{}, {Types::Float, Types::Float}}},
+	{"GetMouseScreenPixelPosition", {{}, {Types::Float, Types::Float}}},
+	{"EnableAlternateControlMode", {{Types::Boolean}, {}}},
+	{"EnableNormalMouse", {{Types::Boolean}, {}}},
+	{"EnableNormalKeyInput", {{Types::Boolean}, {}}},
+	#pragma endregion
+
+	// list commands
+
+	#pragma region Movement Commands
+	{"QueueMove", {{Types::Number, Types::Number, Types::Number}, {}}},
+	{"GetQueuedMoveCount", {{}, {Types::Number}}},
+	{"AbortMove", {{}, {}}},
+	{"SuspendMove", {{Types::Number}, {}}},
+	{"ClearQueuedMoves", {{}, {}}},
+	{"GetTargetOffsetX", {{}, {Types::Number}}},
+	{"GetTargetOffsetY", {{}, {Types::Number}}},
+	{"SetTargetOffsetX", {{Types::Number}, {}}},
+	{"SetTargetOffsetY", {{Types::Number}, {}}},
+	{"GetUnitTargetOffsetX", {{Types::Int}, {Types::Int}}},
+	{"GetUnitTargetOffsetY", {{Types::Int}, {Types::Int}}},
+	{"SetUnitTargetOffsetX", {{Types::Int, Types::Int}, {}}},
+	{"SetUnitTargetOffsetX", {{Types::Int, Types::Int}, {}}},
 	#pragma endregion
 
 	#pragma region Script Commands
-	{"AddScriptToUnit", {2, 0}},
-	{"GetScriptVar", {3, 1}},
-	{"SetScriptVar", {4, 0}},
+	{"AddScriptToUnit", {{Types::Int, Types::String}, {}}},
+	{"GetScriptVar", {{Types::Int, Types::String, Types::String}, {Types::unknown}}},
+	{"SetScriptVar", {{Types::Int, Types::String, Types::String, Types::unknown}, {}}},
+	#pragma endregion
+
+	#pragma region Terrain and Wall Commands
+	{"GetTerrain", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"SetTerrain", {{Types::Number, Types::Number, Types::Number}, {}}},
 	#pragma endregion
 
 	#pragma region Unit Commands
-	{"Self", {0, 1}},
-	{"GetUnitAttribute", {2, 1}},
-	{"SetUnitAttribute", {3, 0}},
-	{"CurrentCoords", {0, 2}},
-	{"CurrentX", {0, 1}},
-	{"CurrentY", {0, 1}},
+	{"Self", {{}, {Types::Number}}},
+	{"GetUnitAttribute", {{Types::Number, Types::String}, {Types::Number}}},
+	{"SetUnitAttribute", {{Types::Number, Types::String, Types::unknown}, {}}},
+	{"CurrentCoords", {{}, {Types::Int, Types::Int}}},
+	{"CurrentX", {{}, {Types::Number}}},
+	{"CurrentY", {{}, {Types::Number}}},
 	#pragma endregion
 
 	#pragma region Image Commands
-	{"SetImage", {3, 0}},
-	{"SetImagePosition", {5, 0}},
-	{"SetImagePositionX", {3, 0}},
-	{"SetImagePositionY", {3, 0}},
-	{"SetImagePositionZ", {3, 0}},
-	{"SetImageScale", {4, 0}},
-	{"SetImageScaleX", {3, 0}},
-	{"SetImageScaleY", {3, 0}},
-	{"SetImageRotation", {3, 0}},
-	{"SetImageColor", {6, 0}},
-	{"GetImagePosition", {2, 3}},
-	{"GetImagePositionX", {2, 1}},
-	{"GetImagePositionY", {2, 1}},
-	{"GetImagePositionZ", {2, 1}},
-	{"GetImageScale", {2, 2}},
-	{"GetImageScaleX", {3, 1}},
-	{"GetImageScaleY", {3, 1}},
-	{"GetImageRotation", {2, 1}},
-	{"GetImageColor", {2, 4}},
-	{"RemoveImages", {1, 0}},
+	{"SetImage", {{Types::Int, Types::String, Types::String}, {}}},
+	{"SetImagePosition", {{Types::Int, Types::String, Types::Number, Types::Number, Types::Number}, {}}},
+	{"SetImagePositionX", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImagePositionY", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImagePositionZ", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImageScale", {{Types::Int, Types::String, Types::Number, Types::Number}, {}}},
+	{"SetImageScaleX", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImageScaleY", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImageRotation", {{Types::Int, Types::String, Types::Number}, {}}},
+	{"SetImageColor", {{Types::Int, Types::String, Types::Number, Types::Number, Types::Number, Types::Number}, {}}},
+	{"GetImagePosition", {{Types::Int, Types::String}, {Types::Number, Types::Number, Types::Number}}},
+	{"GetImagePositionX", {{Types::Int, Types::String}, {Types::Number}}},
+	{"GetImagePositionY", {{Types::Int, Types::String}, {Types::Number}}},
+	{"GetImagePositionZ", {{Types::Int, Types::String}, {Types::Number}}},
+	{"GetImageScale", {{Types::Int, Types::String}, {Types::Number, Types::Number}}},
+	{"GetImageScaleX", {{Types::Int, Types::String, Types::unknown}, {Types::Number}}},
+	{"GetImageScaleY", {{Types::Int, Types::String, Types::unknown}, {Types::Number}}},
+	{"GetImageRotation", {{Types::Int, Types::String}, {Types::Number}}},
+	{"GetImageColor", {{Types::Int, Types::String}, {Types::Int, Types::Int, Types::Int, Types::Int}}},
+	{"RemoveImages", {{Types::Number}, {}}},
 	#pragma endregion
 
 	#pragma region Creeper Commands
-	{"AddCreeper", {3, 0}},
-	{"DamageCreeper", {6, 0}},
-	{"SetCreeperNoLower", {3, 0}},
-	{"IsCreeperInRange", {7, 1}},
-	{"SetCreeper", {3, 0}},
-	{"GetCreeper", {2, 1}},
+	{"AddCreeper", {{Types::Int, Types::Int, Types::Number}, {}}},
+	{"DamageCreeper", {{Types::Number, Types::Number, Types::Number, Types::Number, Types::Number, Types::Boolean}, {}}},
+	{"SetCreeperNoLower", {{Types::Number, Types::Number, Types::Number}, {}}},
+	{"IsCreeperInRange", {{Types::Number, Types::Number, Types::Number, Types::Number, Types::Boolean, Types::Boolean, Types::Boolean}, {Types::Boolean}}},
+	{"SetCreeper", {{Types::Number, Types::Number, Types::Number}, {}}},
+	{"GetCreeper", {{Types::Number, Types::Number}, {Types::Number}}},
 	#pragma endregion
 
 	#pragma region Utility Commands
-	{"GetGameTimeFrames", {0, 1}},
+	{"GetGameTimeFrames", {{}, {Types::Number}}},
 	#pragma endregion
 
 	#pragma region Utility Commands
-	{"SetPopupText", {1, 0}},
-	{"SetPopupTextAlwaysVisible", {1, 0}},
-	{"SetPopupTextX", {1, 0}},
-	{"SetPopupTextY", {1, 0}},
-	{"SetText", {1, 0}},
-	{"SetTextAnchor", {1, 0}},
-	{"SetTextColor", {4, 0}},
-	{"SetTextSize", {1, 0}},
-	{"SetTextX", {1, 0}},
-	{"SetTextY", {1, 0}},
+	{"SetPopupText", {{Types::String}, {}}},
+	{"SetPopupTextAlwaysVisible", {{Types::Boolean}, {}}},
+	{"SetPopupTextX", {{Types::Number}, {}}},
+	{"SetPopupTextY", {{Types::Number}, {}}},
+	{"SetText", {{Types::String}, {}}},
+	{"SetTextAnchor", {{(Types)(Types::Int | Types::String)}, {}}},
+	{"SetTextColor", {{Types::Number, Types::Number, Types::Number, Types::Number}, {}}},
+	{"SetTextSize", {{Types::Number}, {}}},
+	{"SetTextX", {{Types::Number}, {}}},
+	{"SetTextY", {{Types::Number}, {}}},
+	#pragma endregion
+
+	#pragma region Screen Commands
+	{"ScreenHeight", {{}, {Types::Int}}},
+	{"ScreenWidth", {{}, {Types::Int}}},
+	{"SetScreenMode", {{Types::Boolean}, {}}},
+	{"SetScreenCoords", {{Types::Number, Types::Number}, {}}},
+	{"GetCameraPosition", {{}, {Types::Number, Types::Number}}},
+	{"SetCameraPosition", {{Types::Number, Types::Number}, {}}},
+	#pragma endregion
+
+	#pragma region Debugging
+	{"Trace", {{Types::unknown}, {}}},
+	{"ShowTraceLog", {{}, {}}},
 	#pragma endregion
 };
 
@@ -195,76 +236,49 @@ void Converter::newLine() {
 	}
 }
 
-Types Converter::resolveType(const AstNode& node) {
-	if(dynamic_cast<const IntLit*>(&node) || dynamic_cast<const BoolLit*>(&node)) {
-		return Types::Int;
-	}
-	if(dynamic_cast<const FloatLit*>(&node)) {
-		return Types::Float;
-	}
-	if(dynamic_cast<const StringLit*>(&node)) {
-		return Types::String;
-	}
-	if(auto op = dynamic_cast<const Operation*>(&node)) {
-		auto left = resolveType(*(op->Left));
-		auto right = resolveType(*(op->Right));
-
-		if(left == Types::String || right == Types::String) {
-			return Types::String;
-		}
-		if(left == Types::Float || right == Types::Float) {
-			return Types::Float;
-		}
-		if(left == Types::Int || right == Types::Int) {
-			return Types::Int;
-		}
-		return Types::Unknown;
-	}
-	if(auto var = dynamic_cast<const Variable*>(&node)) {
-		auto v = findVar(var->Name);
-		if(v) {
-			return resolveType(*(v->Value));
-		}
-	}
-	return Types::Unknown;
-}
-
-const LetStatement* Converter::findVar(const std::string& name) {
+const ScopeItem* Converter::findVar(const std::string& name) {
 	for(int i = scopes.size() - 1; i >= 0; i--) {
 		auto& scope = scopes[i];
 		if(scope.count(name)) {
-			return scope[name];
+			return &scope[name];
 		}
 	}
 	return nullptr;
 }
 
-void Converter::visit(const AstNode* node, bool discard) {
+void Converter::visit(AstNode* node, bool discard) {
 	node->visit(*this, discard);
 }
 
 void Converter::visit(const ReturnStatement& node) {
-	if(node.ReturnValue) {
-		visit(node.ReturnValue, false);
+	assert(stack.empty());
+
+	for(auto& value : node.ReturnValues) {
+		visit(value, false);
 	}
+
+	while(!stack.empty()) {
+		stack.pop();
+	}
+
 	buffer << "return ";
-	newLine();
 }
 
 void Converter::visit(const LoopStatement& node) {
 	// TODO: var declaration in Init
-	visit(node.Init, true);
+	if(node.Init) {
+		visit(node.Init, true);
+	}
 	buffer << "while ";
 	visit(node.Condition, false);
-	if(stack != 1) {
+	if(stack.size() != 1) {
 		LogError(Error, node.Location, "Stack error: too many parameters for loop condition");
 	}
 	buffer << "repeat ";
 	visit(node.Body, true);
 	visit(node.Repeat, true);
 	buffer << "endwhile";
-	assert(stack == 0);
-	newLine();
+	assert(stack.empty());
 }
 
 void Converter::visit(const DoLoopStatement& node) {
@@ -272,19 +286,22 @@ void Converter::visit(const DoLoopStatement& node) {
 }
 
 void Converter::visit(const IfStatement& node) {
+	assert(stack.empty());
+
+	buffer << "if(";
 	visit(node.Condition, false);
-	if(stack == 0) {
-		LogError(Error, node.Location, "Stack error: missing parameter for if condition");
-	} else if(stack != 1) {
-		LogError(Error, node.Location, "Stack error: too many parameters for if condition");
+	if(stack.empty()) {
+		LogError(Error, node.Location, "Missing parameter for if condition");
+	} else if(stack.size() > 1) {
+		LogError(Error, node.Location, "Too many parameters for if condition");
 	}
-	buffer << "if";
-	stack--;
+	buffer << ")";
+	stack.pop();
 
 	depth++;
 	newLine();
 	visit(node.If, true);
-	assert(stack == 0);
+	assert(stack.empty());
 	if(node.Else) {
 		depth--;
 		newLine();
@@ -292,54 +309,99 @@ void Converter::visit(const IfStatement& node) {
 		depth++;
 		newLine();
 		visit(node.Else, true);
-		assert(stack == 0);
+		assert(stack.empty());
 	}
 	depth--;
 	newLine();
-	buffer << "endif";
-	newLine();
+	buffer << "endif ";
 }
 
 void Converter::visit(const Scope& node) {
 	scopes.emplace_back();
 	for(auto&& i : node.Body) {
 		visit(i, true);
-		assert(stack == 0);
+		newLine();
+		assert(stack.empty());
 	}
 	auto scope = scopes.back();
 	scopes.pop_back();
 	for(auto&& n : scope) {
-		if(n.second->Type == Tokentype::Let) {
-			buffer << "--" << n.second->getName();
+		if(n.second.Toketype == Tokentype::Let) {
+			buffer << "--" << n.second.Codename;
 			newLine();
 		}
 	}
 }
 
-void Converter::visit(const LetStatement& node) {
-	if(node.Type == Tokentype::Const) {
+void Converter::visit(LetStatement& node) {
+	if(node.TokenType == Tokentype::Const) {
 		LogError(Error, node.Location, "Input variable only allowed at root level");
 	}
-	if(node.Value) {
-		visit(node.Value, false);
-		assert(stack == 1);
-	} else {
-		buffer << "0";
+	if(node.TokenType == Tokentype::Var) {
+		LogError(Warning, node.Location, "Prefer declaring global variables with let on root level");
 	}
+
 	auto& scope = scopes.back();
-	if(scope.count(node.Name)) {
-		LogError(Error, node.Location, "Variable " + node.Name + " already defined");
+
+	for(LetItem& item : node.Items) {
+		if(item.Value) {
+			visit(item.Value, false);
+
+			if(stack.size() != item.Names.size()) {
+				LogError(Error, node.Location, "Right side of assign returns wrong amount of parameters");
+				while(!stack.empty()) {
+					stack.pop();
+				}
+			} else {
+				for(int i = item.Names.size() - 1; i >= 0; i--) {
+					const auto& name = item.Names[i];
+					ScopeItem el;
+					if(scope.count(name)) {
+						LogError(Error, item.Location, "Local variable " + name + " has already been declared");
+						continue;
+					}
+					if(findVar(name)) {
+						LogError(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
+						el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
+					} else {
+						el.Codename = name;
+					}
+					el.Toketype = node.TokenType;
+					el.Typename = stack.top();
+
+					stack.pop();
+					buffer << "->" + el.Codename + " ";
+
+					if(node.TokenType == Tokentype::Var) {
+						scopes[0][name] = el;
+					}
+					scope[name] = el;
+				}
+			}
+		} else {
+			for(int i = item.Names.size() - 1; i >= 0; i--) {
+				const auto& name = item.Names[i];
+				ScopeItem el;
+				if(scope.count(name)) {
+					LogError(Error, item.Location, "Local variable " + name + " has already been declared");
+					continue;
+				}
+				if(findVar(name)) {
+					LogError(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
+					el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
+				} else {
+					el.Codename = name;
+				}
+				el.Toketype = node.TokenType;
+				el.Typename = Types::unknown;
+
+				if(node.TokenType == Tokentype::Var) {
+					scopes[0][name] = el;
+				}
+				scope[name] = el;
+			}
+		}
 	}
-	if(findVar(node.Name)) {
-		LogError(Warning, node.Location, "Declaration of '" + node.Name + "' hides previous local declaration");
-	}
-	if(node.Type == Tokentype::Var) {
-		scopes[0][node.Name] = &node;
-	}
-	scope[node.Name] = &node;
-	buffer << "->" + node.getName() + "";
-	stack--;
-	newLine();
 }
 
 void Converter::visit(const FunctionDecl& node) {
@@ -347,30 +409,45 @@ void Converter::visit(const FunctionDecl& node) {
 }
 
 void Converter::visit(const SelectExpression& node, bool discard) {
-	int startStack = stack;
+	const size_t startStack = stack.size();
 	visit(node.Condition, false);
-	assert(stack - startStack == 1);
+	if(stack.size() - startStack == 0) {
+		LogError(Error, node.Location, "");
+	} else if(stack.size() - startStack > 1) {
+		LogError(Error, node.Location, "");
+	}
 	buffer << "if ";
-	stack = startStack;
+	while(stack.size() > startStack) {
+		stack.pop();
+	}
+
 	visit(node.True, discard);
-	int lCount = stack - startStack;
+	const size_t lCount = stack.size() - startStack;
+
 	buffer << "else ";
-	stack = startStack;
+	while(stack.size() > startStack) {
+		stack.pop();
+	}
 	visit(node.False, discard);
-	int rCount = stack - startStack;
+	const size_t rCount = stack.size() - startStack;
 	if(lCount != rCount) {
 		LogError(Error, node.Location, "Stack error: left and right side of ternary expression don't return the same amount of arguments");
 	}
 	buffer << "endif ";
 	if(discard) {
-		assert(stack == 0);
+		assert(stack.empty());
 	}
 }
 
 void Converter::visit(const PreExpression& node, bool discard) {
+	if(!discard && node.Type == Tokentype::Sub && (dynamic_cast<IntLit*>(node.Right) || dynamic_cast<FloatLit*>(node.Right))) {
+		buffer << '-';
+		visit(node.Right, discard);
+		return;
+	}
 	visit(node.Right, discard);
 	if(discard) {
-		assert(stack == 0);
+		assert(stack.empty());
 		return;
 	}
 
@@ -386,36 +463,64 @@ void Converter::visit(const PreExpression& node, bool discard) {
 			break;
 		case Tokentype::Not: buffer << "neg 1 sub ";
 			break;
-		default: throw std::runtime_error("Not reachable");
+		default: throw std::logic_error("Not reachable");
 	}
 }
 
 void Converter::visit(const PostExpression& node, bool discard) {
-	LogError(Error, node.Location, "++ and -- Currently not supported");
+	if(auto var = dynamic_cast<Variable*>(node.Left)) {
+		auto v = findVar(var->Name);
+
+		visit(*var, false);
+		if(v) {
+			switch(node.Type) {
+				case Tokentype::Inc: buffer << "1 add ";
+					break;
+				case Tokentype::Dec: buffer << "1 sub ";
+					break;
+				default: throw std::logic_error("Not reachable");
+			}
+			if(!discard) {
+				buffer << "dup ";
+				stack.push(stack.top());
+			}
+			buffer << "->" << v->Codename;
+			stack.pop();
+		}
+	} else {
+		LogError(Error, node.Location, "left side of post expression has to be variable");
+	}
 }
 
 void Converter::visit(const Operation& node, bool discard) {
 	if(node.Type == Tokentype::Assign) {
 		if(auto var = dynamic_cast<Variable*>(node.Left)) {
+			auto startStack = stack.size();
 			visit(node.Right, false);
+			if(stack.size() - startStack == 0) {
+				LogError(Error, node.Location, "Right side of assign returns nothing");
+			} else if(stack.size() - startStack > 1) {
+				LogError(Error, node.Location, "Right side of assign returns to many parameters");
+			}
+
 			auto v = findVar(var->Name);
 			if(v) {
 				if(!discard) {
 					buffer << "dup ";
-					stack++;
+					stack.push(stack.top());
 				}
-				buffer << "->" << v->getName() << " ";
-				stack--;
+				buffer << "->" << v->Codename << " ";
 			} else {
 				LogError(Error, node.Location, "Undefined variable " + var->Name);
 			}
+			stack.pop();
 			return;
 		}
 		if(auto arr = dynamic_cast<Operation*>(node.Left)) {
 			if(arr->Type == Tokentype::LBracket) {
 				if(auto l = dynamic_cast<Variable*>(arr->Left)) {
 					if(discard) {
-						visit(l, false); // Push list ref
+						visit(l, false);          // Push list ref
 						visit(arr->Right, false); // push index
 						visit(node.Right, false); // push value
 					} else {
@@ -426,11 +531,14 @@ void Converter::visit(const Operation& node, bool discard) {
 						visit(arr->Right, false); // push index
 						buffer << "swap ";
 
-						stack++;
+						stack.push(Types::unknown);
 					}
-					
+
 					buffer << "InsertListElement ";
-					stack -= 3;
+					stack.pop(); // List
+					stack.pop(); // index
+					stack.pop(); // value
+
 					return;
 				} else {
 					LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
@@ -438,93 +546,111 @@ void Converter::visit(const Operation& node, bool discard) {
 				}
 			}
 		}
+		if(auto asd = dynamic_cast<ArrayLit*>(node.Left)) {
+			assert(discard);
+			visit(node.Right, false);
+
+			if(stack.size() != asd->Elements.size()) {
+				LogError(Error, node.Location, "Left side of multi assign has to have same amount of elements as right side");
+			}
+
+			for(int i = asd->Elements.size() - 1; i >= 0; i--) {
+				auto var = dynamic_cast<Variable*>(asd->Elements[i]);
+				if(var) {
+					auto v = findVar(var->Name);
+					if(v) {
+						buffer << "->" << v->Codename << " ";
+					} else {
+						LogError(Error, node.Location, "Undefined variable " + var->Name);
+					}
+					stack.pop();
+				} else {
+					LogError(Error, var->Location, "Left side of multi assign has to be variable");
+				}
+			}
+
+			return;
+		}
 		LogError(Error, node.Location, "Left side of an assign has to be a variable");
 		return;
 	}
 
 	if(discard) {
 		visit(node.Left, true);
-		assert(stack == 0);
+		assert(stack.empty());
 		visit(node.Right, true);
-		assert(stack == 0);
+		assert(stack.empty());
 		return;
 	}
 
-	int stackStart = stack;
+	int stackStart = stack.size();
 	visit(node.Left, false);
-	if(stack - stackStart == 0) {
+	if(stack.size() - stackStart == 0) {
 		LogError(Error, node.Left->Location, "left side of operation returns no arguments");
-	} else if(stack - stackStart > 1) {
+	} else if(stack.size() - stackStart > 1) {
 		LogError(Error, node.Left->Location, "left side of operation returns too many arguments");
 	}
 
-	stackStart = stack;
+	stackStart = stack.size();
 	visit(node.Right, false);
-	if(stack - stackStart == 0) {
+	if(stack.size() - stackStart == 0) {
 		LogError(Error, node.Left->Location, "right side of operation returns no arguments");
-	} else if(stack - stackStart > 1) {
+	} else if(stack.size() - stackStart > 1) {
 		LogError(Error, node.Left->Location, "right side of operation returns too many arguments");
 	}
 
 	switch(node.Type) {
-		case Tokentype::LOr:
-			buffer << "or ";
+		case Tokentype::LOr: buffer << "or ";
 			break;
-		case Tokentype::LAnd:
-			buffer << "and ";
+		case Tokentype::LAnd: buffer << "and ";
 			break;
-		case Tokentype::NullCoal:
-			buffer << "swap dup if swap pop else pop endif ";
+		case Tokentype::NullCoal: buffer << "swap dup if swap pop else pop endif ";
 			break;
-		case Tokentype::Equals:
-			buffer << "eq ";
+		case Tokentype::Equals: buffer << "eq ";
 			break;
-		case Tokentype::NEquals:
-			buffer << "neq ";
+		case Tokentype::NEquals: buffer << "neq ";
 			break;
-		case Tokentype::Less:
-			buffer << "lt ";
+		case Tokentype::Less: buffer << "lt ";
 			break;
-		case Tokentype::LessEq:
-			buffer << "lte ";
+		case Tokentype::LessEq: buffer << "lte ";
 			break;
-		case Tokentype::Greater:
-			buffer << "gt ";
+		case Tokentype::Greater: buffer << "gt ";
 			break;
-		case Tokentype::GreaterEq:
-			buffer << "gte ";
+		case Tokentype::GreaterEq: buffer << "gte ";
 			break;
 		case Tokentype::Or:
 		case Tokentype::Xor:
-		case Tokentype::And:
-			throw "Not implemented";
-		case Tokentype::LShift:
-			buffer << "2 swap pow mul ";
-		case Tokentype::RShift:
-			buffer << "2 swap pow div ";
-		case Tokentype::Sub:
-			buffer << "sub ";
+		case Tokentype::And: throw std::logic_error("Not implemented");
+		case Tokentype::LShift: buffer << "2 swap pow mul ";
+		case Tokentype::RShift: buffer << "2 swap pow div ";
+		case Tokentype::Sub: buffer << "sub ";
 			break;
-		case Tokentype::Mul:
-			buffer << "mul ";
+		case Tokentype::Mul: buffer << "mul ";
 			break;
-		case Tokentype::Pow:
-			buffer << "pow ";
+		case Tokentype::Pow: buffer << "pow ";
 			break;
-		case Tokentype::Div:
-			buffer << "div ";
+		case Tokentype::Div: buffer << "div ";
 			break;
-		case Tokentype::Mod:
-			buffer << "mod ";
+		case Tokentype::Mod: buffer << "mod ";
 			break;
 		case Tokentype::Add:
-			if(resolveType(node) == Types::String) {
+		{
+			auto l = stack.top();
+			stack.pop();
+			auto r = stack.top();
+			stack.pop();
+			if((l != unknown && l & Types::String) || (r != unknown && r & Types::String)) {
 				buffer << "concat ";
 				LogError(Warning, node.Location, "Use template strings instead of addition");
+				stack.pop();
+				stack.pop();
+				stack.push(Types::String);
 			} else {
 				buffer << "add ";
+				stack.push(Types::Number);
 			}
-			break;
+			return;
+		}
 		case Tokentype::LBracket:
 			if(!dynamic_cast<Variable*>(node.Left)) {
 				LogError(Error, node.Left->Location, "Left side of array select has to be Variable");
@@ -534,48 +660,86 @@ void Converter::visit(const Operation& node, bool discard) {
 		default:
 			throw std::runtime_error("Not reachable");
 	}
-	stack--;
+	stack.pop();
 }
 
 void Converter::visit(const FunctionCall& node, bool discard) {
-	if(auto var = dynamic_cast<Variable*>(node.Left)) {
-		int stackStart = stack;
-		for(auto&& param : node.Params) {
-			visit(param, false);
-		}
-		int count = stack - stackStart;
-
-		if(functions.count(var->Name)) {
-			buffer << "@" << var->Name;
-			if(discard) {
-				// TODO: check for return count
-				// buffer << "ClearStack ";
-			}
-		} else if(nativeVars.count(var->Name)) {
-			auto& func = nativeVars[var->Name];
-			buffer << var->Name;
-			if(count < func.consumes) {
-				LogError(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
-			} else if(count > func.consumes) {
-				LogError(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
-			}
-			if(discard && func.returns > 0) {
-				buffer << "ClearStack ";
-			}
-			stack = stackStart + func.returns;
-		} else {
-			LogError(Error, var->Location, "Unknown function \"" + var->Name + '"');
-		}
-		newLine();
-	} else {
+	auto var = dynamic_cast<Variable*>(node.Left);
+	if(!var) {
 		LogError(Error, node.Location, "Left side of function call has to be function name");
+		return;
+	}
+
+
+	if(functions.count(var->Name)) {
+		buffer << "@" << var->Name << '(';
+	} else if(nativeVars.count(var->Name)) {
+		buffer << var->Name << '(';
+	} else { }
+
+	const size_t stackStart = stack.size();
+	for(auto&& param : node.Params) {
+		visit(param, false);
+	}
+	const size_t count = stack.size() - stackStart;
+	buffer << ')';
+
+	if(functions.count(var->Name)) {
+		auto& func = *functions[var->Name];
+
+		if(count < func.Params.size()) {
+			LogError(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+		} else if(count > func.Params.size()) {
+			LogError(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+		}
+		for(int i = 0; i < count; i++) {
+			stack.pop();
+		}
+
+		if(discard && func.ReturnCount != 0) {
+			buffer << "ClearStack ";
+		} else {
+			// TODO: better type checking
+			for(int i = 0; i < func.ReturnCount; i++) {
+				stack.push(Types::unknown);
+			}
+
+		}
+	} else if(nativeVars.count(var->Name)) {
+		auto& func = nativeVars[var->Name];
+		if(count < func.consumes.size()) {
+			LogError(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+		} else if(count > func.consumes.size()) {
+			LogError(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+		} else {
+			// Check of elements on stack are of correct type
+			for(int i = func.consumes.size() - 1; i >= 0; i--) {
+				const auto expected = func.consumes[i];
+				const auto actual = stack.top();
+				stack.pop();
+
+				if(!(actual & expected)) {
+					LogError(Warning, node.Location, "parameter type might be wrong");
+				}
+			}
+		}
+
+		if(discard && !func.returns.empty()) {
+			buffer << "ClearStack ";
+		} else {
+			for(const auto t : func.returns) {
+				stack.push(t);
+			}
+		}
+	} else {
+		LogError(Error, var->Location, "Unknown function \"" + var->Name + '"');
 	}
 }
 
 void Converter::visit(const IntLit& node, bool discard) {
 	if(!discard) {
 		buffer << node.Value << " ";
-		stack++;
+		stack.push(Types::Int);
 	}
 }
 
@@ -587,21 +751,21 @@ void Converter::visit(const FloatLit& node, bool discard) {
 		} else {
 			buffer << " ";
 		}
-		stack++;
+		stack.push(Types::Float);
 	}
 }
 
 void Converter::visit(const StringLit& node, bool discard) {
 	if(!discard) {
 		buffer << '\"' << node.Value << "\" ";
-		stack++;
+		stack.push(Types::String);
 	}
 }
 
 void Converter::visit(const BoolLit& node, bool discard) {
 	if(!discard) {
 		buffer << (node.Value ? "TRUE " : "FALSE ");
-		stack++;
+		stack.push(Types::Boolean);
 	}
 }
 
@@ -609,44 +773,49 @@ void Converter::visit(const ArrayLit& node, bool discard) {
 	if(discard) {
 		for(const auto element : node.Elements) {
 			visit(element, true);
-			assert(stack == 0);
+			assert(stack.empty());
 		}
 	} else {
-		int startStack = stack;
+		const size_t startStack = stack.size();
 		buffer << "CreateList ";
 
 		for(auto element : node.Elements) {
 			buffer << "dup ";
 			visit(element, false);
-			if(stack == 0) {
+			if(stack.size() - startStack == 0) {
 				LogError(Warning, element->Location, "array element returns no elements");
-			} else if(stack > 1) {
+			} else if(stack.size() - startStack > 1) {
 				LogError(Warning, element->Location, "array element returns multiple elements");
 			}
-			while (stack > 0) {
+			while(stack.size() > startStack) {
 				buffer << "AppendToList ";
-				stack--;
+				stack.pop();
 			}
 		}
-		stack++;
+
+		stack.push(Types::List);
 	}
 }
 
 void Converter::visit(const Variable& node, bool discard) {
 	auto v = findVar(node.Name);
 	if(v) {
-		buffer << "<-" << v->getName() << ' ';
-		stack++;
+		buffer << "<-" << v->Codename << ' ';
+		stack.push(v->Typename);
 	} else {
 		if(nativeVars.count(node.Name)) {
 			// TODO: if (function is const && discard) the call can be skipped
 			auto var = nativeVars[node.Name];
 			buffer << node.Name << " ";
-			if(var.consumes != 0) {
+			if(!var.consumes.empty()) {
 				LogError(Error, node.Location, node.Name + " is a function and not a variable");
 			}
-			stack += var.returns;
-			if(discard && stack != 0) {
+			// Push all returns onto the stack
+			for(const auto t : var.returns) {
+				stack.push(t);
+			}
+
+			if(discard && !stack.empty()) {
 				buffer << "ClearStack ";
 			}
 		} else {
@@ -655,9 +824,96 @@ void Converter::visit(const Variable& node, bool discard) {
 	}
 }
 
+static int CountReturn(Statement* node) {
+	if(auto scope = dynamic_cast<Scope*>(node)) {
+		int count = -1;
+		for(auto i : scope->Body) {
+			auto val = CountReturn(i);
+			if(val == -1) continue;
+			if(count == -1) {
+				count = val;
+				continue;
+			}
+			if(count != val) {
+				LogError(Error, i->Location, "Function always has to return the same amount of parameters");
+			}
+		}
+		return count;
+	}
+	if(auto ret = dynamic_cast<ReturnStatement*>(node)) {
+		return ret->ReturnValues.size();
+	}
+	if(auto loop = dynamic_cast<LoopStatement*>(node)) {
+		return CountReturn(loop->Body);
+	}
+	if(auto ifs = dynamic_cast<IfStatement*>(node)) {
+		int count = CountReturn(ifs->If);
+		if(ifs->Else) {
+			int v = CountReturn(ifs->Else);
+			if(count == -1) {
+				count = v;
+			} else if(v != -1 && count != v) {
+				LogError(Error, ifs->Else->Location, "Function always has to return the same amount of parameters");
+			}
+		}
+		return count;
+	}
+
+	return -1;
+}
+
+void Converter::visitFunctionDecl(const FunctionDecl& node) {
+	depth = 0;
+	newLine();
+
+	depth = 1;
+	buffer << ':' << node.Name;
+	newLine();
+
+	scopes.emplace_back();
+	auto& scope = scopes.back();
+
+	for(int i = node.Params.size() - 1; i >= 0; i--) {
+		auto& param = node.Params[i];
+
+		if(scope.count(param.Name)) {
+			LogError(Error, node.Location, "Local variable " + param.Name + " has already been declared");
+			continue;
+		}
+		ScopeItem el;
+		if(findVar(param.Name)) {
+			LogError(Warning, node.Location, "Declaration of '" + param.Name + "' hides previous local declaration");
+			el.Codename = param.Name + "_" + std::to_string(node.Location.line) + "_" + std::to_string(node.Location.column);
+		} else {
+			el.Codename = param.Name;
+		}
+		buffer << "->" + el.Codename + " ";
+		newLine();
+
+		el.Toketype = Tokentype::Let;
+		el.Typename = Types::unknown;
+		scope[el.Codename] = el;
+	}
+
+	for(auto&& i : node.Body->Body) {
+		visit(i, true);
+		newLine();
+		assert(stack.empty());
+	}
+
+	for(auto& n : scope) {
+		if(n.second.Toketype == Tokentype::Let) {
+			buffer << "--" << n.second.Codename;
+			newLine();
+		}
+	}
+	scopes.pop_back();
+}
+
 std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) {
 	Converter cnvrt;
 	FunctionDecl* main = nullptr;
+	int count = 0;
 
 	for(auto node : ast) {
 		if(auto func = dynamic_cast<FunctionDecl*>(node)) {
@@ -665,58 +921,81 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 				main = func;
 				continue;
 			}
+			auto count = CountReturn(func->Body);
+			if(count == -1) {
+				count = 0;
+			}
+			func->ReturnCount = count;
+
+			if(nativeVars.count(func->Name)) {
+				LogError(Error, node->Location, "Native function with same name already exists");
+			}
 			if(cnvrt.functions.count(func->Name)) {
 				LogError(Error, node->Location, "function \"" + func->Name + "\" exists multiple times");
 			}
 			cnvrt.functions[func->Name] = func;
-		} else if(auto var = dynamic_cast<LetStatement*>(node)) {
-			if(var->Type == Tokentype::Const) {
-				cnvrt.buffer << '$' << var->Name << ':';
-				cnvrt.scopes[0][var->Name] = var;
-
-				// TODO: do better const eval
-				if(dynamic_cast<IntLit*>(var->Value) || dynamic_cast<FloatLit*>(var->Value) || dynamic_cast<StringLit*>(var->Value) || dynamic_cast<BoolLit*>(var->Value)) {
-					cnvrt.visit(var->Value, false);
-					cnvrt.stack = 0;
-					cnvrt.newLine();
-					continue;
-				}
-				if(const auto op = dynamic_cast<PreExpression*>(var->Value)) {
-					if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Right) || dynamic_cast<FloatLit*>(op->Right))) {
-						cnvrt.buffer << "-";
-						cnvrt.visit(op->Right, false);
-						cnvrt.stack = 0;
-						cnvrt.newLine();
-						continue;
+			continue;
+		}
+		if(auto var = dynamic_cast<LetStatement*>(node)) {
+			if(var->TokenType == Tokentype::Const) {
+				for(LetItem& item : var->Items) {
+					if(item.Names.size() != 1) {
+						LogError(Error, item.Location, "Cannot have multi declaration for input variables");
 					}
+
+
+					auto name = item.Names[0];
+					cnvrt.buffer << '$' << name << ':';
+
+					// TODO: do better const eval
+					if(dynamic_cast<IntLit*>(item.Value) || dynamic_cast<FloatLit*>(item.Value) || dynamic_cast<StringLit*>(item.Value) || dynamic_cast<BoolLit*>(item.Value)) {
+						cnvrt.visit(item.Value, false);
+					} else if(const auto op = dynamic_cast<PreExpression*>(item.Value)) {
+						if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Right) || dynamic_cast<FloatLit*>(op->Right))) {
+							cnvrt.buffer << "-";
+							cnvrt.visit(op->Right, false);
+						} else {
+							LogError(Error, var->Location, "Right site of input variable has to be simple constant");
+							cnvrt.stack.push(Types::unknown);
+						}
+					} else {
+						LogError(Error, var->Location, "Right site of input variable has to be simple constant");
+						cnvrt.stack.push(Types::unknown);
+					}
+
+					cnvrt.newLine();
+					cnvrt.scopes[0][name] = ScopeItem{ name, cnvrt.stack.top(), Tokentype::Const };
+					cnvrt.stack.pop();
 				}
-				LogError(Error, var->Location, "Right site of input variable has to be simple constant");
 			}
 		}
+		count++;
 	}
 
 	if(!main) {
 		LogError(Error, fileName, "No main function found");
 	}
 
-	cnvrt.buffer << "once";
-	cnvrt.depth = 1;
-	cnvrt.newLine();
+	if(count != 0) {
+		cnvrt.buffer << "once";
+		cnvrt.depth = 1;
+		cnvrt.newLine();
 
-	for(auto node : ast) {
-		if(dynamic_cast<FunctionDecl*>(node)) {
-			continue;
-		}
-		if(auto l = dynamic_cast<LetStatement*>(node)) {
-			if(l->Type == Tokentype::Const) {
+		for(auto node : ast) {
+			if(dynamic_cast<FunctionDecl*>(node)) {
 				continue;
 			}
+			if(auto l = dynamic_cast<LetStatement*>(node)) {
+				if(l->TokenType == Tokentype::Const) {
+					continue;
+				}
+			}
+			cnvrt.visit(node, true);
 		}
-		cnvrt.visit(node, true);
+		cnvrt.depth = 0;
+		cnvrt.newLine();
+		cnvrt.buffer << "endonce\n\n";
 	}
-	cnvrt.depth = 0;
-	cnvrt.newLine();
-	cnvrt.buffer << "endonce\n\n";
 
 	cnvrt.visit(main->Body, true);
 
@@ -725,18 +1004,7 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 		if(!func || func->Name == "main") {
 			continue;
 		}
-		cnvrt.depth = 0;
-		cnvrt.newLine();
-
-		cnvrt.depth = 1;
-		cnvrt.buffer << ':' << func->Name;
-		cnvrt.newLine();
-
-		for(auto param : func->Params) {
-			throw std::logic_error("Not implemented");
-		}
-
-		cnvrt.visit(func->Body, true);
+		cnvrt.visitFunctionDecl(*func);
 	}
 
 	return cnvrt.buffer.str();

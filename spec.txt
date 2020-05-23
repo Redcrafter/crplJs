@@ -6,13 +6,15 @@ arrayLit  := '[' (expr (',' expr)*)? ']'
 
 statement := return | for | while | doWhile | if | scope | varDecl | functionDecl | expr
 
-return  := 'return' expr?;
+return  := 'return' (expr (',' expr)*)?;
 for 	:= 'for' '(' expr? ';' expr? ';' expr? ')' statement
 while	:= 'while' '(' expr ')' statement
 doWhile	:= 'do' statement 'while' '(' expr ')'
 if		:= 'if' '(' expr ')' statement ('else' statement)?
 scope   := '{' statement* '}'
-varDecl := ('let' | 'var' | 'const') ID ('=' expr)?
+varDecl := ('let' | 'var' | 'const') varItem (',' varItem)*
+
+varItem := (ID | '[' (ID (',' ID)*) ']') ('=' expr)?
 
 functionDecl := 'function' ID '(' (type ID (',' type ID)*)? ')' scope
 

@@ -5,25 +5,25 @@
 #include "parser.h"
 #include "converter.h"
 
-void ReturnStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void LoopStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void DoLoopStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void IfStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void Scope::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void LetStatement::visit(Converter& converter, bool discard) const { converter.visit(*this); }
-void FunctionDecl::visit(Converter& converter, bool discard) const { converter.visit(*this); }
+void ReturnStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void LoopStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void DoLoopStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void IfStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void Scope::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void LetStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void FunctionDecl::visit(Converter& converter, bool discard) { converter.visit(*this); }
 
-void SelectExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void PreExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void PostExpression::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void Operation::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void FunctionCall::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void IntLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void FloatLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void StringLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void BoolLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void ArrayLit::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
-void Variable::visit(Converter& converter, bool discard) const { converter.visit(*this, discard); }
+void SelectExpression::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void PreExpression::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void PostExpression::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void Operation::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void FunctionCall::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void IntLit::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void FloatLit::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void StringLit::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void BoolLit::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void ArrayLit::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
+void Variable::visit(Converter& converter, bool discard) { converter.visit(*this, discard); }
 
 Parser::Parser(std::deque<Token> tokens): Tokens(std::move(tokens)), CurrentToken(Tokens.front()) {
 	Tokens.pop_front();
@@ -60,15 +60,18 @@ Statement* Parser::ParseStatement() {
     switch (CurrentToken.type) {
         case Tokentype::Return: {
             acceptIt();
-            Expression* expr = nullptr;
+            std::vector<Expression*> expressions;
 
-            if (CurrentToken.type != Tokentype::Semicolon) {
-                expr = ParseExpression();
-            }
-            if (CurrentToken.type == Tokentype::Semicolon) {
-                acceptIt();
-            }
-            return new ReturnStatement(location, expr);
+            while (CurrentToken.type != Tokentype::Semicolon) {
+                expressions.push_back(ParseExpression());
+                if (CurrentToken.type == Tokentype::Comma) {
+                    acceptIt();
+                } else {
+                    break;
+                }
+			}
+            accept(Tokentype::Semicolon);
+            return new ReturnStatement(location, expressions);
         }
         case Tokentype::For: {
             Expression* a = nullptr;
@@ -128,15 +131,45 @@ Statement* Parser::ParseStatement() {
         case Tokentype::Let: {
             auto type = CurrentToken.type;
             acceptIt();
-            auto name = accept(Tokentype::ID);
-            Expression* value = nullptr;
-            if (CurrentToken.type == Tokentype::Assign) {
-                acceptIt();
-                value = ParseExpression();
+
+            std::vector<LetItem> elements;
+            while(true) {
+                std::vector<std::string> names;
+                auto location = CurrentToken.location;
+
+                if(CurrentToken.type == Tokentype::LBracket) {
+                    acceptIt();
+                    while(true) {
+                        names.push_back(accept(Tokentype::ID));
+                        if(CurrentToken.type == Tokentype::Comma) {
+                            acceptIt();
+                        } else {
+                            break;
+                        }
+                    }
+                    accept(Tokentype::RBracket);
+                } else {
+                    names.push_back(accept(Tokentype::ID));
+                }
+
+                Expression* value = nullptr;
+                if (CurrentToken.type == Tokentype::Assign) {
+                    acceptIt();
+                    value = ParseExpression();
+                }
+
+                elements.emplace_back(location, names, value);
+
+                if(CurrentToken.type == Tokentype::Comma) {
+                    acceptIt();
+                } else {
+                    break;
+                }
             }
+
             accept(Tokentype::Semicolon);
 
-            return new LetStatement(location, type, name, value);
+            return new LetStatement(location, type, elements);
         }
         case Tokentype::Function: {
             acceptIt();
