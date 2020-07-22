@@ -22,7 +22,7 @@ FileWatcher::FileWatcher(const std::vector<std::string>& paths): Paths(paths) {
     for(auto &path : paths) {
         if(fs::is_directory(path)) {
             for (auto &file : fs::recursive_directory_iterator(path)) {
-                Files[file.path().string()] = fs::last_write_time(file);
+                Files[fs::canonical(file).string()] = fs::last_write_time(file);
             }
         } else {
             auto p = fs::canonical(path);

@@ -12,7 +12,7 @@
 #include "converter.h"
 
 const int majorVersion = 1;
-const int minorVersion = 1;
+const int minorVersion = 2;
 const int patchVersion = 0;
 
 static bool hasOut = false;
@@ -34,18 +34,21 @@ static bool CompileFile(std::string path) {
 	}
 
 	std::deque<Token> queue(res.begin(), res.end());
-	queue.push_back(Token{ Tokentype::Eof, "<EOF>" });
 
 	Parser p(queue);
 	auto ast = p.Parse();
 
-	// code error
+	// syntax error
 	if(Logger::getError()) {
 		Logger::clearError();
+		for(auto& i : ast) {
+			delete i;
+		}
 		return false;
 	}
 
-	auto result = crpl(ast, path);
+	Converter c;
+	auto result = c.Convert(ast, path);
 
 	// convert error
 	if(Logger::getError()) {
@@ -59,7 +62,7 @@ static bool CompileFile(std::string path) {
 	if(hasOut) {
 		outFile = outputPath + "/" + filename;
 	} else {
-		outFile = path.substr(0, path.find_last_of("/\\")) + filename;
+		outFile = path.substr(0, path.find_last_of("/\\") + 1) + filename;
 	}
 	outFile += ".crpl";
 

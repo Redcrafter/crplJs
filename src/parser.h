@@ -2,21 +2,23 @@
 #include <deque>
 
 #include "tokenizer.h"
-// #include "converter.h"
 
 class Converter;
+class TypeChecker;
 
 enum Types {
-	// Void = 0,
-	Int = 1, Boolean = Int,
-	Float = 2,
-	String = 4,
-	List = 8,
+    Number = 1,
+    Int = Number,
+    Boolean = Number,
+    Float = Number,
 
-	Number = Int | Float,
-	StringNum = String | Number,
+    String = 2,
+    List = 4,  // TODO: somehow list of n
+    Reference = 8,
 
-	unknown = 0xFF,
+    StringNum = String | Number,
+
+    unknown = Number | String | List,
 };
 
 struct AstNode {
@@ -25,7 +27,7 @@ struct AstNode {
     AstNode(const SourceLocation& location) : Location(location) {}
     AstNode(const AstNode&) = delete;
     AstNode(AstNode&& o) noexcept : Location(o.Location) {}
-	virtual ~AstNode() { };
+    virtual ~AstNode(){};
 
     virtual void visit(Converter& converter, bool discard) = 0;
 };
@@ -39,20 +41,51 @@ struct Expression : Statement {
 };
 
 #pragma region Statements
+struct LetItem {
+    SourceLocation Location;
+
+    std::vector<std::string> Names;
+    Expression* Value = nullptr;
+
+    LetItem(LetItem&& other) {
+        this->Location = other.Location;
+        this->Names = std::move(other.Names);
+        this->Value = other.Value;
+        other.Value = nullptr;
+    }
+    LetItem() {}
+    LetItem(const SourceLocation location, const std::vector<std::string>& names, Expression* value) : Location(location), Names(names), Value(value) {}
+    LetItem(const LetItem&) = delete;
+    ~LetItem() { delete Value; }
+};
+struct LetStatement : Statement {
+    Tokentype TokenType;
+    std::vector<LetItem> Items;
+
+    LetStatement(const SourceLocation location, Tokentype type, std::vector<LetItem>& items) : Statement(location), TokenType(type), Items(std::move(items)) {}
+
+    void visit(Converter& converter, bool discard);
+};
+
 struct ReturnStatement : Statement {
     std::vector<Expression*> ReturnValues;
 
     ReturnStatement(const SourceLocation location, const std::vector<Expression*>& returnValues) : Statement(location), ReturnValues(returnValues) {}
-    ~ReturnStatement() { for (auto item : ReturnValues) { delete item; } }
+    ~ReturnStatement() {
+        for (auto item : ReturnValues) {
+            delete item;
+        }
+    }
 
     void visit(Converter& converter, bool discard);
 };
 
 struct LoopStatement : Statement {
-    Expression *Init, *Condition, *Repeat;
-    Statement* Body;
+    Statement* Init = nullptr;
+    Expression *Condition = nullptr, *Repeat = nullptr;
+    Statement* Body = nullptr;
 
-    LoopStatement(const SourceLocation location, Expression* init, Expression* condition, Expression* repeat, Statement* body)
+    LoopStatement(const SourceLocation location, Statement* init, Expression* condition, Expression* repeat, Statement* body)
         : Statement(location), Init(init), Condition(condition), Repeat(repeat), Body(body) {}
 
     ~LoopStatement() {
@@ -66,8 +99,8 @@ struct LoopStatement : Statement {
 };
 
 struct DoLoopStatement : Statement {
-    Expression* Condition;
-    Statement* Body;
+    Expression* Condition = nullptr;
+    Statement* Body = nullptr;
 
     DoLoopStatement(const SourceLocation location, Expression* condition, Statement* body)
         : Statement(location), Condition(condition), Body(body) {}
@@ -79,9 +112,27 @@ struct DoLoopStatement : Statement {
 
     void visit(Converter& converter, bool discard);
 };
+
+struct ForOfStatement : Statement {
+    LetStatement* Name = nullptr;
+    Expression* Iterable = nullptr;
+    Statement* Body = nullptr;
+
+    ForOfStatement(const SourceLocation location, LetStatement* name, Expression* iterable, Statement* body)
+        : Statement(location), Name(name), Iterable(iterable), Body(body) {}
+
+    ~ForOfStatement() {
+        delete Name;
+        delete Iterable;
+        delete Body;
+    }
+
+    void visit(Converter& converter, bool discard);
+};
+
 struct IfStatement : Statement {
-    Expression* Condition;
-    Statement *If, *Else;
+    Expression* Condition = nullptr;
+    Statement *If = nullptr, *Else = nullptr;
 
     IfStatement(const SourceLocation location, Expression* condition, Statement* if_, Statement* else_)
         : Statement(location), Condition(condition), If(if_), Else(else_) {}
@@ -100,7 +151,7 @@ struct Scope : Statement {
     Scope(const SourceLocation location, const std::vector<Statement*>& body) : Statement(location), Body(body) {}
 
     ~Scope() {
-        for (auto i : Body) {
+        for (auto& i : Body) {
             delete i;
         }
     }
@@ -108,43 +159,17 @@ struct Scope : Statement {
     void visit(Converter& converter, bool discard);
 };
 
-struct LetItem {
-	SourceLocation Location;
-	
-	std::vector<std::string> Names;
-	Expression* Value = nullptr;;
-
-	LetItem(LetItem&& other) {
-		this->Location = other.Location;
-		this->Names = std::move(other.Names);
-		this->Value = other.Value;
-		other.Value = nullptr;
-	}
-	LetItem() { }
-	LetItem(const SourceLocation location, const std::vector<std::string>& names, Expression* value) : Location(location), Names(names), Value(value) { }
-	LetItem(const LetItem&) = delete;
-	~LetItem() { delete Value; }
-};
-struct LetStatement : Statement {
-    Tokentype TokenType;
-	std::vector<LetItem> Items;
-
-	LetStatement(const SourceLocation location, Tokentype type, std::vector<LetItem>& items) : Statement(location), TokenType(type), Items(std::move(items)) { }
-	
-    void visit(Converter& converter, bool discard);
-};
 struct Param {
     std::string Name;
-    Expression* Default;
+    Expression* Default = nullptr;
 
     ~Param() { delete Default; }
 };
 struct FunctionDecl : Statement {
     std::string Name;
     std::vector<Param> Params;
-    int ReturnCount = 0;
-    // std::vector<Types> ReturnTypes;
-    Scope* Body;
+    std::vector<Types> ReturnTypes;
+    Scope* Body = nullptr;
 
     FunctionDecl(const SourceLocation location, std::string name, const std::vector<Param>& params, Scope* body) : Statement(location), Name(name), Params(params), Body(body) {}
     ~FunctionDecl() { delete Body; }
@@ -155,8 +180,8 @@ struct FunctionDecl : Statement {
 
 #pragma region
 struct SelectExpression : Expression {
-    Expression* Condition;
-    Statement *True, *False;
+    Expression* Condition = nullptr;
+    Statement *True = nullptr, *False = nullptr;
 
     SelectExpression(const SourceLocation location, Expression* condition, Statement* trueE, Statement* falseE) : Expression(location), Condition(condition), True(trueE), False(falseE) {}
 
@@ -170,7 +195,7 @@ struct SelectExpression : Expression {
 };
 struct PreExpression : Expression {
     Tokentype Type;
-    Expression* Right;
+    Expression* Right = nullptr;
 
     PreExpression(const SourceLocation location, Tokentype type, Expression* left) : Expression(location), Type(type), Right(left) {}
     ~PreExpression() { delete Right; }
@@ -179,7 +204,7 @@ struct PreExpression : Expression {
 };
 struct PostExpression : Expression {
     Tokentype Type;
-    Expression* Left;
+    Expression* Left = nullptr;
 
     PostExpression(const SourceLocation location, Tokentype type, Expression* right) : Expression(location), Type(type), Left(right) {}
     ~PostExpression() { delete Left; }
@@ -188,8 +213,8 @@ struct PostExpression : Expression {
 };
 struct Operation : Expression {
     Tokentype Type;
-    Expression* Left;
-    Expression* Right;
+    Expression* Left = nullptr;
+    Expression* Right = nullptr;
 
     Operation(const SourceLocation location, Tokentype type, Expression* left, Expression* right) : Expression(location), Type(type), Left(left), Right(right) {}
     ~Operation() {
@@ -200,7 +225,7 @@ struct Operation : Expression {
     void visit(Converter& converter, bool discard);
 };
 struct FunctionCall : Expression {
-    Expression* Left;
+    Expression* Left = nullptr;
     std::vector<Expression*> Params;
 
     FunctionCall(const SourceLocation location, Expression* left, const std::vector<Expression*>& params) : Expression(location), Left(left), Params(params) {}
@@ -238,10 +263,10 @@ struct BoolLit : Expression {
 
     void visit(Converter& converter, bool discard);
 };
-struct ArrayLit: Expression {
+struct ArrayLit : Expression {
     std::vector<Expression*> Elements;
 
-    ArrayLit(const SourceLocation location, const std::vector<Expression*>& elements): Expression(location), Elements(elements) {}
+    ArrayLit(const SourceLocation location, const std::vector<Expression*>& elements) : Expression(location), Elements(elements) {}
     ~ArrayLit() {
         for (auto i : Elements) {
             delete i;
@@ -265,7 +290,7 @@ class Parser {
    public:
     Parser(std::deque<Token> tokens);
 
-    std::vector<AstNode*> Parse();
+    std::vector<Statement*> Parse();
 
    private:
     void acceptIt();
@@ -287,7 +312,6 @@ class Parser {
     Expression* ParseShift();
     Expression* ParseAdd();
     Expression* ParseMul();
-    Expression* ParsePow();
     Expression* ParsePrefix();
     Expression* ParsePostfix();
     Expression* ParseAtom();

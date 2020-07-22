@@ -1,3 +1,4 @@
+#include <cassert>
 #include <stdexcept>
 #include <functional>
 
@@ -5,9 +6,97 @@
 #include "parser.h"
 #include "converter.h"
 
+static const char* TokenNames[] = {
+    "<EOF>",
+
+    "ID",
+    "Int Literal",
+    "Float Literal",
+    "String Literal",
+    "Bool Literal",
+
+    "let",
+    "var",
+    "const",
+    "return",
+    "for",
+    "do",
+    "while",
+    "of",
+    "in",
+    "if",
+    "else",
+    "switch",
+    "case",
+    "default",
+    "function",
+
+    "break",
+    "continue",
+
+    "`",
+    "$",
+    "(",
+    ")",
+    "{",
+    "}",
+    "[",
+    "]",
+
+    "<",
+    "<=",
+    "==",
+    "!=",
+    ">=",
+    ">",
+
+    ",",
+    ":",
+    ";",
+
+    "+",
+    "-",
+    "*",
+    "**",
+    "/",
+    "%",
+    ">>",
+    "<<",
+
+    "++",
+    "--",
+
+    "=",
+    "+=",
+    "-=",
+    "*=",
+    "/=",
+    "%=",
+    "&=",
+    "|=",
+    "^=",
+    "<<=",
+    ">>=",
+
+    "~",
+    "^",
+    "&",
+    "|",
+
+    "!",
+    "&&",
+    "||",
+
+    ".",
+    "?",
+    "?.",
+    "??"
+};
+
 void ReturnStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
 void LoopStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
 void DoLoopStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
+void ForOfStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
 void IfStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
 void Scope::visit(Converter& converter, bool discard) { converter.visit(*this); }
 void LetStatement::visit(Converter& converter, bool discard) { converter.visit(*this); }
@@ -32,23 +121,32 @@ Parser::Parser(std::deque<Token> tokens): Tokens(std::move(tokens)), CurrentToke
 std::string Parser::accept(Tokentype type) {
 	Token t = CurrentToken;
     if(CurrentToken.type != type) {
-		Logger::Log(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
+		Logger::Log(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + "\" expected \"" + TokenNames[(int)type + 1] + '"');
     }
     acceptIt();
     return t.spelling;
 }
 
 void Parser::acceptIt() {
-	CurrentToken = Tokens.front();
-	Tokens.pop_front();
+	if(!Tokens.empty()) {
+		CurrentToken = Tokens.front();
+		Tokens.pop_front();
+	}
 }
 
-std::vector<AstNode*> Parser::Parse() {
-    std::vector<AstNode*> statements;
+std::vector<Statement*> Parser::Parse() {
+    std::vector<Statement*> statements;
 
     while (CurrentToken.type != Tokentype::Eof) {
-        auto st = ParseStatement();
-        statements.push_back(st);
+		if(CurrentToken.type == Tokentype::Semicolon) {
+			acceptIt();
+			continue;;
+		}
+		auto statement = ParseStatement();
+    	if(statement == nullptr) {
+			break;
+    	}
+    	statements.push_back(statement);
     }
     
     return statements;
@@ -74,13 +172,26 @@ Statement* Parser::ParseStatement() {
             return new ReturnStatement(location, expressions);
         }
         case Tokentype::For: {
-            Expression* a = nullptr;
+            Statement* a = nullptr;
             Expression* b = nullptr;
             Expression* c = nullptr;
             acceptIt();
             accept(Tokentype::LParen);
             if (CurrentToken.type != Tokentype::Semicolon) {
-                a = ParseExpression();
+                if(CurrentToken.type == Tokentype::Let || CurrentToken.type == Tokentype::Const || CurrentToken.type == Tokentype::Var) {
+                    a = ParseStatement();
+                    assert(dynamic_cast<LetStatement*>(a) != nullptr);
+
+                    if(CurrentToken.type == Tokentype::Of) {
+                        acceptIt();
+                        Expression* iterable = ParseExpression();
+						accept(Tokentype::RParen);
+
+                        return new ForOfStatement(location, (LetStatement*)a, iterable, ParseStatement());
+                    }
+                } else {
+                    a = ParseExpression();
+                }
             }
             accept(Tokentype::Semicolon);
             if (CurrentToken.type != Tokentype::Semicolon) {
@@ -88,7 +199,7 @@ Statement* Parser::ParseStatement() {
             }
             accept(Tokentype::Semicolon);
             if (CurrentToken.type != Tokentype::Semicolon) {
-                a = ParseExpression();
+                c = ParseExpression();
             }
             accept(Tokentype::RParen);
 
@@ -167,8 +278,6 @@ Statement* Parser::ParseStatement() {
                 }
             }
 
-            accept(Tokentype::Semicolon);
-
             return new LetStatement(location, type, elements);
         }
         case Tokentype::Function: {
@@ -199,7 +308,6 @@ Statement* Parser::ParseStatement() {
     }
 
     auto expr = ParseExpression();
-    accept(Tokentype::Semicolon);
     return expr;
 }
 
@@ -208,10 +316,18 @@ Scope* Parser::ParseScope() {
 
     accept(Tokentype::LBrace);
     std::vector<Statement*> body;
-    while (CurrentToken.type != Tokentype::RBrace) {
-        body.push_back(ParseStatement());
+    while (CurrentToken.type != Tokentype::RBrace && CurrentToken.type != Tokentype::Eof) {
+		if(CurrentToken.type == Tokentype::Semicolon) {
+			acceptIt();
+			continue;;
+		}
+    	auto statement = ParseStatement();
+		if(statement == nullptr) {
+			break;
+		}
+		body.push_back(statement);
     }
-    acceptIt();
+	accept(Tokentype::RBrace);
     return new Scope(location, body);
 }
 
@@ -504,4 +620,5 @@ Expression* Parser::ParseAtom() {
     }
 
 	Logger::Log(Error, CurrentToken.location, "Unexpected symbol \"" + CurrentToken.spelling + '"');
+	return nullptr;
 }

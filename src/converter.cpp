@@ -8,14 +8,16 @@
 #include <cmath>
 #include <cassert>
 
+// delete variables after exiting scope?
+// test performance impact
+// #define deleteVars
+
 struct NativeVar {
 	std::vector<Types> consumes;
 	std::vector<Types> returns;
 };
 
-// TODO: eq0 neq0
-
-std::map<std::string, NativeVar> nativeVars = {
+static std::map<std::string, NativeVar> nativeVars = {
 	// "I", "J", "K"
 	{"CONST_ACPACKETREQUESTDELAY", {{}, {Types::String}}},
 	{"CONST_AMMO", {{}, {Types::String}}},
@@ -57,24 +59,25 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"CONST_THORTARGET", {{}, {Types::String}}},
 
 	#pragma region Math Commands
+	{"E", {{}, {Types::Float}}},
+	{"PI", {{}, {Types::Float}}},
+
 	{"abs", {{Types::Number}, {Types::Number}}},
 	{"acos", {{Types::Number}, {Types::Number}}},
 	{"approximately", {{Types::Number, Types::Number}, {Types::Number}}},
-	{"asfloat", {{Types::Number}, {Types::Float}}},
+	// {"asfloat", {{Types::Number}, {Types::Float}}},
 	{"asin", {{Types::Number}, {Types::Number}}},
-	{"asint", {{Types::Number}, {Types::Number}}},
+	// {"asint", {{Types::Number}, {Types::Number}}},
 	{"atan", {{Types::Number}, {Types::Number}}},
 	{"atan2", {{Types::Number, Types::Number}, {Types::Number}}},
 	{"ceil", {{Types::Number}, {Types::Number}}},
 	{"cos", {{Types::Number}, {Types::Number}}},
-	{"E", {{}, {Types::Float}}},
 	{"floor", {{Types::Number}, {Types::Number}}},
 	{"ln", {{Types::Number}, {Types::Number}}},
 	{"log", {{Types::Number, Types::Number}, {Types::Number}}},
 	{"log10", {{Types::Number}, {Types::Number}}},
 	{"max", {{Types::Number, Types::Number}, {Types::Number}}},
 	{"min", {{Types::Number, Types::Number}, {Types::Number}}},
-	{"PI", {{}, {Types::Float}}},
 	{"pow", {{Types::Number, Types::Number}, {Types::Number}}},
 	{"round", {{Types::Number, Types::Number}, {Types::Number}}},
 	{"ShortestAngle", {{Types::Number, Types::Number}, {Types::Number}}},
@@ -127,7 +130,9 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"EnableNormalKeyInput", {{Types::Boolean}, {}}},
 	#pragma endregion
 
-	// list commands
+	#pragma region Lists
+	{"GetListCount", {{Types::List}, {Types::Number}}},
+	#pragma endregion
 
 	#pragma region Movement Commands
 	{"QueueMove", {{Types::Number, Types::Number, Types::Number}, {}}},
@@ -163,6 +168,12 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"CurrentCoords", {{}, {Types::Int, Types::Int}}},
 	{"CurrentX", {{}, {Types::Number}}},
 	{"CurrentY", {{}, {Types::Number}}},
+	{"CurrentPixelCoords", {{}, {Types::Number, Types::Number}}},
+	{"GetCoresWithVar", {{Types::String, Types::unknown}, {Types::List}}},
+	{"Destroy", {{Types::Number, Types::Number},{}}},
+	{"EnableTowerField", {{Types::Number, Types::Number, Types::Number, Types::Number, Types::Boolean},{}}},
+	{"DisableTowerField", {{},{}}},
+	{"CreateUnit", {{Types::String, Types::Number, Types::Number}, {Types::Number}}},
 	#pragma endregion
 
 	#pragma region Image Commands
@@ -195,11 +206,16 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"IsCreeperInRange", {{Types::Number, Types::Number, Types::Number, Types::Number, Types::Boolean, Types::Boolean, Types::Boolean}, {Types::Boolean}}},
 	{"SetCreeper", {{Types::Number, Types::Number, Types::Number}, {}}},
 	{"GetCreeper", {{Types::Number, Types::Number}, {Types::Number}}},
+	{"GetCreeperColors", {{}, {Types::Number, Types::Number, Types::Number, Types::Number, Types::Number, Types::Number}}},
 	#pragma endregion
 
 	#pragma region Utility Commands
 	{"GetGameTimeFrames", {{}, {Types::Number}}},
+	{"RandCoordsInRange", {{Types::Number, Types::Number, Types::Number}, {Types::Number, Types::Number}}},
+	{"OperateWhilePaused", {{Types::Boolean}, {}}},
 	#pragma endregion
+
+	{"CreateSpore", {{Types::Number, Types::Number, Types::Number, Types::Number, Types::Number, Types::Number}, {}}},
 
 	#pragma region Utility Commands
 	{"SetPopupText", {{Types::String}, {}}},
@@ -212,6 +228,7 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"SetTextSize", {{Types::Number}, {}}},
 	{"SetTextX", {{Types::Number}, {}}},
 	{"SetTextY", {{Types::Number}, {}}},
+	{"IsPaused", {{}, {Types::Boolean}}},
 	#pragma endregion
 
 	#pragma region Screen Commands
@@ -221,608 +238,22 @@ std::map<std::string, NativeVar> nativeVars = {
 	{"SetScreenCoords", {{Types::Number, Types::Number}, {}}},
 	{"GetCameraPosition", {{}, {Types::Number, Types::Number}}},
 	{"SetCameraPosition", {{Types::Number, Types::Number}, {}}},
+	{"CellToPixel", {{Types::Number, Types::Number}, {Types::Number, Types::Number}}},
 	#pragma endregion
 
 	#pragma region Debugging
 	{"Trace", {{Types::unknown}, {}}},
+	{"Trace2", {{Types::unknown, Types::unknown}, {}}},
+	{"Trace3", {{Types::unknown, Types::unknown, Types::unknown}, {}}},
+	{"Trace4", {{Types::unknown, Types::unknown, Types::unknown, Types::unknown}, {}}},
+	{"Trace5", {{Types::unknown, Types::unknown, Types::unknown, Types::unknown, Types::unknown}, {}}},
+	{"TraceStack", {{}, {}}},
 	{"ShowTraceLog", {{}, {}}},
+	{"ClearTraceLog", {{}, {}}},
+	{"HideTraceLog", {{}, {}}},
 	#pragma endregion
 };
 
-void Converter::newLine() {
-	buffer << '\n';
-	for(int i = 0; i < depth; i++) {
-		buffer << '\t';
-	}
-}
-
-const ScopeItem* Converter::findVar(const std::string& name) {
-	for(int i = scopes.size() - 1; i >= 0; i--) {
-		auto& scope = scopes[i];
-		if(scope.count(name)) {
-			return &scope[name];
-		}
-	}
-	return nullptr;
-}
-
-void Converter::visit(AstNode* node, bool discard) {
-	node->visit(*this, discard);
-}
-
-void Converter::visit(const ReturnStatement& node) {
-	assert(stack.empty());
-
-	for(auto& value : node.ReturnValues) {
-		visit(value, false);
-	}
-
-	while(!stack.empty()) {
-		stack.pop();
-	}
-
-	buffer << "return ";
-}
-
-void Converter::visit(const LoopStatement& node) {
-	// TODO: var declaration in Init
-	if(node.Init) {
-		visit(node.Init, true);
-	}
-	buffer << "while ";
-	visit(node.Condition, false);
-	if(stack.size() != 1) {
-		Logger::Log(Error, node.Location, "Stack error: too many parameters for loop condition");
-	}
-	buffer << "repeat ";
-	visit(node.Body, true);
-	visit(node.Repeat, true);
-	buffer << "endwhile";
-	assert(stack.empty());
-}
-
-void Converter::visit(const DoLoopStatement& node) {
-	Logger::Log(Error, node.Location, "Not implemented");
-}
-
-void Converter::visit(const IfStatement& node) {
-	assert(stack.empty());
-
-	buffer << "if(";
-	visit(node.Condition, false);
-	if(stack.empty()) {
-		Logger::Log(Error, node.Location, "Missing parameter for if condition");
-	} else if(stack.size() > 1) {
-		Logger::Log(Error, node.Location, "Too many parameters for if condition");
-	}
-	buffer << ")";
-	stack.pop();
-
-	depth++;
-	newLine();
-	visit(node.If, true);
-	assert(stack.empty());
-	if(node.Else) {
-		depth--;
-		newLine();
-		buffer << "else";
-		depth++;
-		newLine();
-		visit(node.Else, true);
-		assert(stack.empty());
-	}
-	depth--;
-	newLine();
-	buffer << "endif ";
-}
-
-void Converter::visit(const Scope& node) {
-	scopes.emplace_back();
-	for(auto&& i : node.Body) {
-		visit(i, true);
-		newLine();
-		assert(stack.empty());
-	}
-	auto scope = scopes.back();
-	scopes.pop_back();
-	for(auto&& n : scope) {
-		if(n.second.Toketype == Tokentype::Let) {
-			buffer << "--" << n.second.Codename;
-			newLine();
-		}
-	}
-}
-
-void Converter::visit(LetStatement& node) {
-	if(node.TokenType == Tokentype::Const) {
-		Logger::Log(Error, node.Location, "Input variable only allowed at root level");
-	}
-	if(node.TokenType == Tokentype::Var) {
-		Logger::Log(Warning, node.Location, "Prefer declaring global variables with let on root level");
-	}
-
-	auto& scope = scopes.back();
-
-	for(LetItem& item : node.Items) {
-		if(item.Value) {
-			visit(item.Value, false);
-
-			if(stack.size() != item.Names.size()) {
-				Logger::Log(Error, node.Location, "Right side of assign returns wrong amount of parameters");
-				while(!stack.empty()) {
-					stack.pop();
-				}
-			} else {
-				for(int i = item.Names.size() - 1; i >= 0; i--) {
-					const auto& name = item.Names[i];
-					ScopeItem el;
-					if(scope.count(name)) {
-						Logger::Log(Error, item.Location, "Local variable " + name + " has already been declared");
-						continue;
-					}
-					if(findVar(name)) {
-						Logger::Log(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
-						el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
-					} else {
-						el.Codename = name;
-					}
-					el.Toketype = node.TokenType;
-					el.Typename = stack.top();
-
-					stack.pop();
-					buffer << "->" + el.Codename + " ";
-
-					if(node.TokenType == Tokentype::Var) {
-						scopes[0][name] = el;
-					}
-					scope[name] = el;
-				}
-			}
-		} else {
-			for(int i = item.Names.size() - 1; i >= 0; i--) {
-				const auto& name = item.Names[i];
-				ScopeItem el;
-				if(scope.count(name)) {
-					Logger::Log(Error, item.Location, "Local variable " + name + " has already been declared");
-					continue;
-				}
-				if(findVar(name)) {
-					Logger::Log(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
-					el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
-				} else {
-					el.Codename = name;
-				}
-				el.Toketype = node.TokenType;
-				el.Typename = Types::unknown;
-
-				if(node.TokenType == Tokentype::Var) {
-					scopes[0][name] = el;
-				}
-				scope[name] = el;
-			}
-		}
-	}
-}
-
-void Converter::visit(const FunctionDecl& node) {
-	Logger::Log(Error, node.Location, "Nested functions not allowed");
-}
-
-void Converter::visit(const SelectExpression& node, bool discard) {
-	const size_t startStack = stack.size();
-	visit(node.Condition, false);
-	if(stack.size() - startStack == 0) {
-		Logger::Log(Error, node.Location, "");
-	} else if(stack.size() - startStack > 1) {
-		Logger::Log(Error, node.Location, "");
-	}
-	buffer << "if ";
-	while(stack.size() > startStack) {
-		stack.pop();
-	}
-
-	visit(node.True, discard);
-	const size_t lCount = stack.size() - startStack;
-
-	buffer << "else ";
-	while(stack.size() > startStack) {
-		stack.pop();
-	}
-	visit(node.False, discard);
-	const size_t rCount = stack.size() - startStack;
-	if(lCount != rCount) {
-		Logger::Log(Error, node.Location, "Stack error: left and right side of ternary expression don't return the same amount of arguments");
-	}
-	buffer << "endif ";
-	if(discard) {
-		assert(stack.empty());
-	}
-}
-
-void Converter::visit(const PreExpression& node, bool discard) {
-	if(!discard && node.Type == Tokentype::Sub && (dynamic_cast<IntLit*>(node.Right) || dynamic_cast<FloatLit*>(node.Right))) {
-		buffer << '-';
-		visit(node.Right, discard);
-		return;
-	}
-	visit(node.Right, discard);
-	if(discard) {
-		assert(stack.empty());
-		return;
-	}
-
-	switch(node.Type) {
-		case Tokentype::Inc:
-		case Tokentype::Dec:
-			Logger::Log(Error, node.Location, "++ and -- Currently not supported");
-			break;
-		case Tokentype::Add: break;
-		case Tokentype::Sub: buffer << "neg ";
-			break;
-		case Tokentype::LNot: buffer << "not ";
-			break;
-		case Tokentype::Not: buffer << "neg 1 sub ";
-			break;
-		default: throw std::logic_error("Not reachable");
-	}
-}
-
-void Converter::visit(const PostExpression& node, bool discard) {
-	if(auto var = dynamic_cast<Variable*>(node.Left)) {
-		auto v = findVar(var->Name);
-
-		visit(*var, false);
-		if(v) {
-			switch(node.Type) {
-				case Tokentype::Inc: buffer << "1 add ";
-					break;
-				case Tokentype::Dec: buffer << "1 sub ";
-					break;
-				default: throw std::logic_error("Not reachable");
-			}
-			if(!discard) {
-				buffer << "dup ";
-				stack.push(stack.top());
-			}
-			buffer << "->" << v->Codename;
-			stack.pop();
-		}
-	} else {
-		Logger::Log(Error, node.Location, "left side of post expression has to be variable");
-	}
-}
-
-void Converter::visit(const Operation& node, bool discard) {
-	if(node.Type == Tokentype::Assign) {
-		if(auto var = dynamic_cast<Variable*>(node.Left)) {
-			auto startStack = stack.size();
-			visit(node.Right, false);
-			if(stack.size() - startStack == 0) {
-				Logger::Log(Error, node.Location, "Right side of assign returns nothing");
-			} else if(stack.size() - startStack > 1) {
-				Logger::Log(Error, node.Location, "Right side of assign returns to many parameters");
-			}
-
-			auto v = findVar(var->Name);
-			if(v) {
-				if(!discard) {
-					buffer << "dup ";
-					stack.push(stack.top());
-				}
-				buffer << "->" << v->Codename << " ";
-			} else {
-				Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
-			}
-			stack.pop();
-			return;
-		}
-		if(auto arr = dynamic_cast<Operation*>(node.Left)) {
-			if(arr->Type == Tokentype::LBracket) {
-				if(auto l = dynamic_cast<Variable*>(arr->Left)) {
-					if(discard) {
-						visit(l, false);          // Push list ref
-						visit(arr->Right, false); // push index
-						visit(node.Right, false); // push value
-					} else {
-						visit(node.Right, false); // push value
-						buffer << "dup ";
-						visit(l, false); // Push list ref
-						buffer << "swap ";
-						visit(arr->Right, false); // push index
-						buffer << "swap ";
-
-						stack.push(Types::unknown);
-					}
-
-					buffer << "InsertListElement ";
-					stack.pop(); // List
-					stack.pop(); // index
-					stack.pop(); // value
-
-					return;
-				} else {
-					Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
-					return;
-				}
-			}
-		}
-		if(auto asd = dynamic_cast<ArrayLit*>(node.Left)) {
-			assert(discard);
-			visit(node.Right, false);
-
-			if(stack.size() != asd->Elements.size()) {
-				Logger::Log(Error, node.Location, "Left side of multi assign has to have same amount of elements as right side");
-			}
-
-			for(int i = asd->Elements.size() - 1; i >= 0; i--) {
-				auto var = dynamic_cast<Variable*>(asd->Elements[i]);
-				if(var) {
-					auto v = findVar(var->Name);
-					if(v) {
-						buffer << "->" << v->Codename << " ";
-					} else {
-						Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
-					}
-					stack.pop();
-				} else {
-					Logger::Log(Error, var->Location, "Left side of multi assign has to be variable");
-				}
-			}
-
-			return;
-		}
-		Logger::Log(Error, node.Location, "Left side of an assign has to be a variable");
-		return;
-	}
-
-	if(discard) {
-		visit(node.Left, true);
-		assert(stack.empty());
-		visit(node.Right, true);
-		assert(stack.empty());
-		return;
-	}
-
-	int stackStart = stack.size();
-	visit(node.Left, false);
-	if(stack.size() - stackStart == 0) {
-		Logger::Log(Error, node.Left->Location, "left side of operation returns no arguments");
-	} else if(stack.size() - stackStart > 1) {
-		Logger::Log(Error, node.Left->Location, "left side of operation returns too many arguments");
-	}
-
-	stackStart = stack.size();
-	visit(node.Right, false);
-	if(stack.size() - stackStart == 0) {
-		Logger::Log(Error, node.Left->Location, "right side of operation returns no arguments");
-	} else if(stack.size() - stackStart > 1) {
-		Logger::Log(Error, node.Left->Location, "right side of operation returns too many arguments");
-	}
-
-	switch(node.Type) {
-		case Tokentype::LOr: buffer << "or ";
-			break;
-		case Tokentype::LAnd: buffer << "and ";
-			break;
-		case Tokentype::NullCoal: buffer << "swap dup if swap pop else pop endif ";
-			break;
-		case Tokentype::Equals: buffer << "eq ";
-			break;
-		case Tokentype::NEquals: buffer << "neq ";
-			break;
-		case Tokentype::Less: buffer << "lt ";
-			break;
-		case Tokentype::LessEq: buffer << "lte ";
-			break;
-		case Tokentype::Greater: buffer << "gt ";
-			break;
-		case Tokentype::GreaterEq: buffer << "gte ";
-			break;
-		case Tokentype::Or:
-		case Tokentype::Xor:
-		case Tokentype::And: throw std::logic_error("Not implemented");
-		case Tokentype::LShift: buffer << "2 swap pow mul ";
-		case Tokentype::RShift: buffer << "2 swap pow div ";
-		case Tokentype::Sub: buffer << "sub ";
-			break;
-		case Tokentype::Mul: buffer << "mul ";
-			break;
-		case Tokentype::Pow: buffer << "pow ";
-			break;
-		case Tokentype::Div: buffer << "div ";
-			break;
-		case Tokentype::Mod: buffer << "mod ";
-			break;
-		case Tokentype::Add:
-		{
-			auto l = stack.top();
-			stack.pop();
-			auto r = stack.top();
-			stack.pop();
-			if((l != unknown && l & Types::String) || (r != unknown && r & Types::String)) {
-				buffer << "concat ";
-				Logger::Log(Warning, node.Location, "Use template strings instead of addition");
-				stack.pop();
-				stack.pop();
-				stack.push(Types::String);
-			} else {
-				buffer << "add ";
-				stack.push(Types::Number);
-			}
-			return;
-		}
-		case Tokentype::LBracket:
-			if(!dynamic_cast<Variable*>(node.Left)) {
-				Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
-			}
-			buffer << "GetListElement ";
-			break;
-		default:
-			throw std::runtime_error("Not reachable");
-	}
-	stack.pop();
-}
-
-void Converter::visit(const FunctionCall& node, bool discard) {
-	auto var = dynamic_cast<Variable*>(node.Left);
-	if(!var) {
-		Logger::Log(Error, node.Location, "Left side of function call has to be function name");
-		return;
-	}
-
-
-	if(functions.count(var->Name)) {
-		buffer << "@" << var->Name << '(';
-	} else if(nativeVars.count(var->Name)) {
-		buffer << var->Name << '(';
-	} else { }
-
-	const size_t stackStart = stack.size();
-	for(auto&& param : node.Params) {
-		visit(param, false);
-	}
-	const size_t count = stack.size() - stackStart;
-	buffer << ')';
-
-	if(functions.count(var->Name)) {
-		auto& func = *functions[var->Name];
-
-		if(count < func.Params.size()) {
-			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
-		} else if(count > func.Params.size()) {
-			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
-		}
-		for(int i = 0; i < count; i++) {
-			stack.pop();
-		}
-
-		if(discard && func.ReturnCount != 0) {
-			buffer << "ClearStack ";
-		} else {
-			// TODO: better type checking
-			for(int i = 0; i < func.ReturnCount; i++) {
-				stack.push(Types::unknown);
-			}
-
-		}
-	} else if(nativeVars.count(var->Name)) {
-		auto& func = nativeVars[var->Name];
-		if(count < func.consumes.size()) {
-			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
-		} else if(count > func.consumes.size()) {
-			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
-		} else {
-			// Check of elements on stack are of correct type
-			for(int i = func.consumes.size() - 1; i >= 0; i--) {
-				const auto expected = func.consumes[i];
-				const auto actual = stack.top();
-				stack.pop();
-
-				if(!(actual & expected)) {
-					Logger::Log(Warning, node.Location, "parameter type might be wrong");
-				}
-			}
-		}
-
-		if(discard && !func.returns.empty()) {
-			buffer << "ClearStack ";
-		} else {
-			for(const auto t : func.returns) {
-				stack.push(t);
-			}
-		}
-	} else {
-		Logger::Log(Error, var->Location, "Unknown function \"" + var->Name + '"');
-	}
-}
-
-void Converter::visit(const IntLit& node, bool discard) {
-	if(!discard) {
-		buffer << node.Value << " ";
-		stack.push(Types::Int);
-	}
-}
-
-void Converter::visit(const FloatLit& node, bool discard) {
-	if(!discard) {
-		buffer << node.Value;
-		if(fmod(node.Value, 1) == 0) {
-			buffer << ".0 ";
-		} else {
-			buffer << " ";
-		}
-		stack.push(Types::Float);
-	}
-}
-
-void Converter::visit(const StringLit& node, bool discard) {
-	if(!discard) {
-		buffer << '\"' << node.Value << "\" ";
-		stack.push(Types::String);
-	}
-}
-
-void Converter::visit(const BoolLit& node, bool discard) {
-	if(!discard) {
-		buffer << (node.Value ? "TRUE " : "FALSE ");
-		stack.push(Types::Boolean);
-	}
-}
-
-void Converter::visit(const ArrayLit& node, bool discard) {
-	if(discard) {
-		for(const auto element : node.Elements) {
-			visit(element, true);
-			assert(stack.empty());
-		}
-	} else {
-		const size_t startStack = stack.size();
-		buffer << "CreateList ";
-
-		for(auto element : node.Elements) {
-			buffer << "dup ";
-			visit(element, false);
-			if(stack.size() - startStack == 0) {
-				Logger::Log(Warning, element->Location, "array element returns no elements");
-			} else if(stack.size() - startStack > 1) {
-				Logger::Log(Warning, element->Location, "array element returns multiple elements");
-			}
-			while(stack.size() > startStack) {
-				buffer << "AppendToList ";
-				stack.pop();
-			}
-		}
-
-		stack.push(Types::List);
-	}
-}
-
-void Converter::visit(const Variable& node, bool discard) {
-	auto v = findVar(node.Name);
-	if(v) {
-		buffer << "<-" << v->Codename << ' ';
-		stack.push(v->Typename);
-	} else {
-		if(nativeVars.count(node.Name)) {
-			// TODO: if (function is const && discard) the call can be skipped
-			auto var = nativeVars[node.Name];
-			buffer << node.Name << " ";
-			if(!var.consumes.empty()) {
-				Logger::Log(Error, node.Location, node.Name + " is a function and not a variable");
-			}
-			// Push all returns onto the stack
-			for(const auto t : var.returns) {
-				stack.push(t);
-			}
-
-			if(discard && !stack.empty()) {
-				buffer << "ClearStack ";
-			}
-		} else {
-			Logger::Log(Error, node.Location, "Undefined variable " + node.Name);
-		}
-	}
-}
 
 static int CountReturn(Statement* node) {
 	if(auto scope = dynamic_cast<Scope*>(node)) {
@@ -862,126 +293,973 @@ static int CountReturn(Statement* node) {
 	return -1;
 }
 
-void Converter::visitFunctionDecl(const FunctionDecl& node) {
+void Converter::newLine() {
+	*buffer << '\n';
+	for(int i = 0; i < depth; i++) {
+		*buffer << '\t';
+	}
+}
+
+const ScopeItem* Converter::findVar(const std::string& name) {
+	for(int i = scopes.size() - 1; i >= 0; i--) {
+		auto& scope = scopes[i];
+		if(scope.variables.count(name)) {
+			return &scope.variables[name];
+		}
+	}
+	return nullptr;
+}
+
+const FunctionDecl* Converter::findFunc(const std::string& name) {
+	for(int i = scopes.size() - 1; i >= 0; i--) {
+		auto& scope = scopes[i];
+		if(scope.functions.count(name)) {
+			return scope.functions[name];
+		}
+	}
+	return nullptr;
+}
+
+void Converter::declareFunctions(const std::vector<Statement*> body) {
+	auto& scope = scopes.back();
+	
+	for(auto node : body) {
+		if(auto func = dynamic_cast<FunctionDecl*>(node)) {
+			// TODO: test duplicate names
+			scope.functions[func->Name] = func;
+		}
+	}
+}
+
+void Converter::visit(AstNode* node, bool discard) {
+	node->visit(*this, discard);
+	if(discard) {
+		assert(stack.empty());
+	}
+}
+
+void Converter::visit(const ReturnStatement& node) {
+	for(auto& value : node.ReturnValues) {
+		visit(value, false);
+	}
+
+	// TODO: function stuff
+	while(!stack.empty()) {
+		stack.pop();
+	}
+
+	*buffer << "return ";
+}
+
+void Converter::visit(const LoopStatement& node) {
+	// TODO: var declaration in Init
+	if(node.Init) {
+		visit(node.Init, true);
+	}
+	*buffer << "while ";
+	visit(node.Condition, false);
+	if(stack.size() != 1) {
+		Logger::Log(Error, node.Location, "Stack error: too many parameters for loop condition");
+	}
+	stack.pop();
+	*buffer << "repeat ";
+	depth++;
+	newLine();
+	visit(node.Body, true);
+	if(node.Repeat != nullptr) {
+		newLine();
+		visit(node.Repeat, true);
+	}
+	depth--;
+	newLine();
+	*buffer << "endwhile ";
+}
+
+void Converter::visit(const DoLoopStatement& node) {
+	// TODO: implement
+	Logger::Log(Error, node.Location, "Do loop not supported yet");
+}
+
+void Converter::visit(const ForOfStatement& node) {
+	char listSymbol = 0;
+	switch (forOfDepth) {
+	case 0: listSymbol = 'I'; break;
+	case 1: listSymbol = 'J'; break;
+	case 2: listSymbol = 'K'; break;
+		default:
+			Logger::Log(Error, node.Location, "Maximum of 3 nested for..of loops allowed");
+			break;
+	}
+	forOfDepth++;
+
+	if(node.Name->Items.size() != 1 || node.Name->Items[0].Names.size() != 1) {
+		Logger::Log(Error, node.Location, "Cannot have multi declaration in for of");
+		return;
+	}
+	if(node.Name->Items[0].Value != nullptr) {
+		Logger::Log(Error, node.Location, "Cannot have variable assignment in for of");
+		return;
+	}
+	ScopeItem el;
+	auto name = node.Name->Items[0].Names[0];
+	if(findVar(name)) {
+		Logger::Log(Warning, node.Name->Location, "Declaration of '" + name + "' hides previous local declaration");
+		el.Codename = name + "_" + std::to_string(node.Location.line);
+	} else {
+		el.Codename = name;
+	}
+	el.Toketype = node.Name->TokenType;
+
+	if(auto call = dynamic_cast<FunctionCall*>(node.Iterable)) {
+		auto funcName = dynamic_cast<Variable*>(call->Left);
+		if(!funcName) {
+			Logger::Log(Error, node.Location, "Left side of function call has to be function name");
+			return;
+		}
+		
+		if(funcName->Name == "GetUnitsInRange" || 
+		   funcName->Name == "GetEnemyUnitsInRange" ||
+		   funcName->Name == "GetAllUnitsInRange" ||
+		   funcName->Name == "GetCoresWithVar") {
+			auto func = nativeVars[funcName->Name];
+			*buffer << funcName->Name << '(';
+
+			const size_t stackStart = stack.size();
+			for(auto&& param : call->Params) {
+				visit(param, false);
+			}
+			auto count = stack.size() - stackStart;
+			if(count < func.consumes.size()) {
+				Logger::Log(Error, funcName->Location, "Missing arguments for function \"" + funcName->Name + '"');
+			} else if(count > func.consumes.size()) {
+				Logger::Log(Error, funcName->Location, "Too many arguments for function \"" + funcName->Name + '"');
+			} else {
+				// Check of elements on stack are of correct type
+				for(int i = func.consumes.size() - 1; i >= 0; i--) {
+					const auto expected = func.consumes[i];
+					const auto actual = stack.top();
+					stack.pop();
+
+					if(!(actual & expected)) {
+						Logger::Log(Warning, node.Location, "parameter type might be wrong");
+					}
+				}
+			}
+
+			scopes.back().variables[name] = el;
+
+			*buffer << ") 0 do";
+			depth++;
+			newLine();
+			*buffer << "->" << el.Codename;
+			newLine();
+			visit(node.Body, true);
+			depth--;
+			newLine();
+			*buffer << "loop";
+			#ifdef deleteVars
+			newLine();
+			*buffer << "--" << el.Codename;
+			#endif
+
+			scopes.back().variables.erase(name);
+
+			forOfDepth--;
+			return;
+		}
+	}
+	
+	// assume node.Iterable is list
+	auto stackStart = stack.size();
+	visit(node.Iterable, false);
+	auto count = stack.size() - stackStart;
+	if(count == 0) {
+		Logger::Log(Error, node.Iterable->Location, "Missing arguments for forOf loop");
+	} else if(count > 1) {
+		Logger::Log(Error, node.Iterable->Location, "Too many arguments for forOf loop");
+		while (count > 0) {
+			stack.pop();
+			count--;
+		}
+	} else {
+		auto t = stack.top();
+		stack.pop();
+		if((t & Types::List) == 0) {
+			Logger::Log(Warning, node.Iterable->Location, "Right side of forOf loop has to be iterable");
+		}
+	}
+
+	
+	scopes.back().variables[name] = el;
+
+	*buffer << "dup GetListCount 0 do";
+	depth++;
+	newLine();
+	*buffer << "dup " << listSymbol << " GetListElement ->" << el.Codename;
+	newLine();
+	visit(node.Body, true);
+	depth--;
+	newLine();
+	*buffer << "loop";
+	#ifdef deleteVars
+	newLine();
+	*buffer << "--" << el.Codename;
+	#endif
+
+	scopes.back().variables.erase(name);
+
+	forOfDepth--;
+}
+
+void Converter::visit(const IfStatement& node) {
+	*buffer << "if(";
+	visit(node.Condition, false);
+
+	if(stack.empty()) {
+		Logger::Log(Error, node.Location, "Missing parameter for if condition");
+		stack.push(Types::unknown);
+	} else if(stack.size() > 1) {
+		Logger::Log(Error, node.Location, "Too many parameters for if condition");
+		while (stack.size() > 1) { stack.pop(); }
+	}
+	*buffer << ")";
+	stack.pop();
+
+	depth++;
+	newLine();
+	visit(node.If, true);
+	if(node.Else) {
+		depth--;
+		newLine();
+		*buffer << "else";
+		depth++;
+		newLine();
+		visit(node.Else, true);
+	}
+	depth--;
+	newLine();
+	*buffer << "endif ";
+}
+
+void Converter::visit(const Scope& node) {
+	scopes.emplace_back();
+
+	declareFunctions(node.Body);
+	for (int i = 0; i < node.Body.size(); i++) {
+		if(i > 0) {
+			newLine();
+		}
+		visit(node.Body[i], true);
+	}
+
+	#ifdef deleteVars
+	auto& scope = scopes.back();
+	for(auto&& n : scope.variables) {
+		if(n.second.Toketype == Tokentype::Let) {
+			newLine();
+			*buffer << "--" << n.second.Codename;
+		}
+	}
+	#endif
+	scopes.pop_back();
+}
+
+void Converter::visit(const LetStatement& node) {
+	if(node.TokenType == Tokentype::Const) {
+		Logger::Log(Error, node.Location, "Input variable only allowed at root level");
+	}
+	if(node.TokenType == Tokentype::Var) {
+		Logger::Log(Warning, node.Location, "Prefer declaring global variables with let on root level");
+	}
+
+	auto& scope = scopes.back();
+
+	for(const LetItem& item : node.Items) {
+		if(item.Value) {
+			visit(item.Value, false);
+
+			if(stack.size() != item.Names.size()) {
+				Logger::Log(Error, node.Location, "Right side of assign returns wrong amount of parameters");
+				while(!stack.empty()) {
+					stack.pop();
+				}
+			}
+		}
+
+		for(int i = item.Names.size() - 1; i >= 0; i--) {
+			const auto& name = item.Names[i];
+			ScopeItem el;
+			if(scope.variables.count(name)) {
+				Logger::Log(Error, item.Location, "Local variable " + name + " has already been declared");
+				continue;
+			}
+			if(findVar(name)) {
+				Logger::Log(Warning, item.Location, "Declaration of '" + name + "' hides previous local declaration");
+				el.Codename = name + "_" + std::to_string(item.Location.line) + "_" + std::to_string(item.Location.column);
+			} else {
+				el.Codename = name;
+			}
+			el.Toketype = node.TokenType;
+			if(item.Value) {
+				*buffer << "->" + el.Codename + " ";
+				stack.pop();
+			}
+
+			if(node.TokenType == Tokentype::Var) {
+				scopes[0].variables[name] = el;
+			}
+			scope.variables[name] = el;
+		}
+	}
+}
+
+void Converter::visit(FunctionDecl& node) {
+	auto retCount = CountReturn(node.Body);
+	for(int i = 0; i < retCount; i++) {
+		node.ReturnTypes.push_back(Types::unknown);
+	}
+	
+	std::ostringstream temp;
+
+	auto oldBuffer = buffer;
+	auto oldDepth = depth;
+
+	buffer = &temp;
+
 	depth = 0;
 	newLine();
 
+	*buffer << ':' << node.Name;
 	depth = 1;
-	buffer << ':' << node.Name;
 	newLine();
+
+	// done in declareFunctions
+	// scopes.back().functions[node.Name] = &node;
 
 	scopes.emplace_back();
 	auto& scope = scopes.back();
 
+	int i = 10;
+
 	for(int i = node.Params.size() - 1; i >= 0; i--) {
 		auto& param = node.Params[i];
 
-		if(scope.count(param.Name)) {
-			Logger::Log(Error, node.Location, "Local variable " + param.Name + " has already been declared");
-			continue;
-		}
 		ScopeItem el;
-		if(findVar(param.Name)) {
+		if(scope.variables.count(param.Name)) {
+			Logger::Log(Error, node.Location, "Duplicate parameter name " + param.Name);
+		} else if(findVar(param.Name)) {
 			Logger::Log(Warning, node.Location, "Declaration of '" + param.Name + "' hides previous local declaration");
 			el.Codename = param.Name + "_" + std::to_string(node.Location.line) + "_" + std::to_string(node.Location.column);
 		} else {
 			el.Codename = param.Name;
 		}
-		buffer << "->" + el.Codename + " ";
+		*buffer << "->" + el.Codename + " ";
 		newLine();
 
 		el.Toketype = Tokentype::Let;
-		el.Typename = Types::unknown;
-		scope[el.Codename] = el;
+		scope.variables[el.Codename] = el;
 	}
 
-	for(auto&& i : node.Body->Body) {
-		visit(i, true);
-		newLine();
-		assert(stack.empty());
-	}
+	declareFunctions(node.Body->Body);
 
-	for(auto& n : scope) {
-		if(n.second.Toketype == Tokentype::Let) {
-			buffer << "--" << n.second.Codename;
+	for(int i = 0; i < node.Body->Body.size(); ++i) {
+		auto el = node.Body->Body[i];
+		if(i > 0) {
 			newLine();
 		}
+		visit(el, true);
 	}
+
+	#ifdef deleteVars
+	for(auto& n : scope.variables) {
+		if(n.second.Toketype == Tokentype::Let) {
+			newLine();
+			*buffer << "--" << n.second.Codename;
+		}
+	}
+	#endif
 	scopes.pop_back();
+
+	functionBuffer << temp.str();
+	buffer = oldBuffer;
+	depth = oldDepth;
 }
 
-std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) {
-	Converter cnvrt;
+void Converter::visit(const SelectExpression& node, bool discard) {
+	const size_t startStack = stack.size();
+	visit(node.Condition, false);
+	auto count = stack.size() - startStack;
+	if(count == 0) {
+		Logger::Log(Error, node.Location, "Condition of select expression returns no arguments");
+		stack.push(Types::unknown);
+	} else if(count > 1) {
+		Logger::Log(Error, node.Location, "Condition of select expression returns to many arguments");
+		while(count > 1) {
+			stack.pop();
+			count--;
+		}
+	}
+	auto val = stack.top();
+	stack.pop();
+	if(val & Types::Boolean == 0) {
+		Logger::Log(Warning, node.Location, "Select condition has to return boolean or number");
+	}
+
+	*buffer << "if ";
+
+	// TODO: compare types?
+	visit(node.True, discard);
+	const size_t lCount = stack.size() - startStack;
+
+	*buffer << "else ";
+	while(stack.size() > startStack) {
+		stack.pop();
+	}
+	visit(node.False, discard);
+	const size_t rCount = stack.size() - startStack;
+	if(lCount != rCount) {
+		Logger::Log(Error, node.Location, "Stack error: left and right side of ternary expression don't return the same amount of arguments");
+	}
+	// just keep the results of the false path for now
+	*buffer << "endif ";
+	
+}
+
+void Converter::visit(const PreExpression& node, bool discard) {
+	if(!discard && node.Type == Tokentype::Sub && (dynamic_cast<IntLit*>(node.Right) || dynamic_cast<FloatLit*>(node.Right))) {
+		*buffer << '-';
+		visit(node.Right, discard);
+		return;
+	}
+	auto start = stack.size();
+	visit(node.Right, discard);
+	auto diff = stack.size() - start;
+	if(diff == 0) {
+		Logger::Log(Error, node.Right->Location, "Right side of prefix expression returns no arguments");
+		stack.push(Types::unknown);
+	} else if(diff > 1) {
+		Logger::Log(Error, node.Right->Location, "Right side of prefix expression returns to many arguments");
+		while (diff > 1) {
+			stack.pop();
+			diff--;
+		}
+	}
+	auto type = stack.top();
+	stack.pop();
+	if(type & Types::Number == 0) {
+		Logger::Log(Warning, node.Location, "Right side of prefix expression should be number");
+	}
+
+	if(discard) {
+		return;
+	}
+
+	switch(node.Type) {
+		case Tokentype::Inc:
+		case Tokentype::Dec:
+			Logger::Log(Error, node.Location, "++ and -- Currently not supported");
+			break;
+		case Tokentype::Add: break;
+		case Tokentype::Sub: *buffer << "neg "; break;
+		case Tokentype::LNot: *buffer << "not "; break;
+		case Tokentype::Not: *buffer << "neg 1 sub "; break;
+		default: throw std::logic_error("Not reachable");
+	}
+	stack.push(Types::Number);
+}
+
+void Converter::visit(const PostExpression& node, bool discard) {
+	if(auto var = dynamic_cast<Variable*>(node.Left)) {
+		auto v = findVar(var->Name);
+		visit(*var, false);
+
+		auto type = stack.top();
+		stack.pop();
+		if(type & Types::Number == 0) {
+			Logger::Log(Warning, node.Location, "Left side of postfix expression should be number");
+		}
+
+		if(v) {
+			switch(node.Type) {
+				case Tokentype::Inc: *buffer << "1 add "; break;
+				case Tokentype::Dec: *buffer << "1 sub "; break;
+				default: throw std::logic_error("Not reachable");
+			}
+			if(!discard) {
+				*buffer << "dup ";
+			}
+			*buffer << "->" << v->Codename << ' ';
+		}
+	} else {
+		Logger::Log(Error, node.Location, "left side of post expression has to be variable");
+	}
+
+	if(!discard) {
+		stack.push(Types::Number);
+	}
+}
+
+void Converter::visit(const Operation& node, bool discard) {
+	if(node.Type == Tokentype::Assign) {
+		if(auto var = dynamic_cast<Variable*>(node.Left)) {
+			auto startStack = stack.size();
+			visit(node.Right, false);
+			if(stack.size() - startStack == 0) {
+				Logger::Log(Error, node.Location, "Right side of assign returns nothing");
+				stack.push(Types::unknown);
+			} else if(stack.size() - startStack > 1) {
+				Logger::Log(Error, node.Location, "Right side of assign returns to many parameters");
+				while (stack.size() - startStack > 1) { stack.pop(); }
+			}
+
+			auto v = findVar(var->Name);
+			if(v) {
+				if(!discard) {
+					*buffer << "dup ";
+					stack.push(stack.top());
+				}
+				*buffer << "->" << v->Codename << " ";
+			} else {
+				Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
+			}
+			stack.pop();
+			return;
+		}
+		if(auto arr = dynamic_cast<Operation*>(node.Left)) {
+			if(arr->Type == Tokentype::LBracket) {
+				if(auto l = dynamic_cast<Variable*>(arr->Left)) {
+					if(discard) {
+						visit(l, false);          // Push list ref
+						visit(arr->Right, false); // push index
+						visit(node.Right, false); // push value
+					} else {
+						visit(node.Right, false); // push value
+						*buffer << "dup ";
+						visit(l, false); // Push list ref
+						*buffer << "swap ";
+						visit(arr->Right, false); // push index
+						*buffer << "swap ";
+
+						stack.push(Types::unknown);
+					}
+
+					*buffer << "SetListElement ";
+					stack.pop(); // List
+					stack.pop(); // index
+					stack.pop(); // value
+
+					return;
+				} else {
+					Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
+					return;
+				}
+			}
+		}
+		if(auto asd = dynamic_cast<ArrayLit*>(node.Left)) {
+			assert(discard);
+			visit(node.Right, false);
+
+			if(stack.size() != asd->Elements.size()) {
+				Logger::Log(Error, node.Location, "Left side of multi assign has to have same amount of elements as right side");
+			}
+
+			for(int i = asd->Elements.size() - 1; i >= 0; i--) {
+				auto var = dynamic_cast<Variable*>(asd->Elements[i]);
+				if(var) {
+					auto v = findVar(var->Name);
+					if(v) {
+						*buffer << "->" << v->Codename << " ";
+					} else {
+						Logger::Log(Error, node.Location, "Undefined variable " + var->Name);
+					}
+					stack.pop();
+				} else {
+					Logger::Log(Error, var->Location, "Left side of multi assign has to be variable");
+				}
+			}
+
+			return;
+		}
+		Logger::Log(Error, node.Location, "Left side of an assign has to be a variable");
+		return;
+	}
+
+	switch (node.Type) {
+		case Tokentype::AddAssign:
+		case Tokentype::SubAssign:
+		case Tokentype::MulAssign:
+		case Tokentype::DivAssign:
+		case Tokentype::ModAssign:
+		case Tokentype::AndAssign:
+		case Tokentype::OrAssign:
+		case Tokentype::XorAssign:
+		case Tokentype::LshiftAssign:
+		case Tokentype::RshiftAssign:
+			Logger::Log(Error, node.Location, "Change assign not implemented");
+			return;
+	}
+
+	if(discard) {
+		auto start = stack.size();
+		visit(node.Left, true);
+		assert(stack.size() == start);
+		visit(node.Right, true);
+		assert(stack.size() == start);
+		return;
+	}
+
+	auto visitLeft = [&]() {
+		int stackStart = stack.size();
+		visit(node.Left, false);
+		if(stack.size() - stackStart == 0) {
+			Logger::Log(Error, node.Left->Location, "left side of operation returns no arguments");
+			stack.push(Types::unknown);
+		} else if(stack.size() - stackStart > 1) {
+			Logger::Log(Error, node.Left->Location, "left side of operation returns too many arguments");
+			while (stack.size() - stackStart > 1) { stack.pop(); }
+		}
+	};
+
+	auto visitRight = [&]() {
+		int stackStart = stack.size();
+		visit(node.Right, false);
+		if(stack.size() - stackStart == 0) {
+			Logger::Log(Error, node.Left->Location, "right side of operation returns no arguments");
+			stack.push(Types::unknown);
+		} else if(stack.size() - stackStart > 1) {
+			Logger::Log(Error, node.Left->Location, "right side of operation returns too many arguments");
+			while (stack.size() - stackStart > 1) { stack.pop(); }
+		}
+	};
+
+	// eq0 neq0
+	if(node.Type == Tokentype::Equals || node.Type == Tokentype::NEquals) {
+		auto l = dynamic_cast<IntLit*>(node.Left);
+		auto r = dynamic_cast<IntLit*>(node.Right);
+
+		if(l != nullptr && l->Value == 0) {
+			visitRight();
+			*buffer << (node.Type == Tokentype::Equals ? "eq0 ": "neq0 ");
+			stack.pop();
+			stack.push(Types::Boolean);
+			return;
+		} if(r != nullptr && r->Value == 0) {
+			visitLeft();
+			*buffer << (node.Type == Tokentype::Equals ? "eq0 ": "neq0 ");
+			stack.pop();
+			stack.push(Types::Boolean);
+			return;
+		}
+	}
+
+	visitLeft();
+	visitRight();
+
+	switch(node.Type) {
+		case Tokentype::LOr: *buffer << "or "; break;
+		case Tokentype::LAnd: *buffer << "and "; break;
+		case Tokentype::NullCoal: *buffer << "swap dup if swap pop else pop endif "; break;
+		case Tokentype::Equals: *buffer << "eq "; break;
+		case Tokentype::NEquals: *buffer << "neq ";  break;
+		case Tokentype::Less: *buffer << "lt "; break;
+		case Tokentype::LessEq: *buffer << "lte "; break;
+		case Tokentype::Greater: *buffer << "gt "; break;
+		case Tokentype::GreaterEq: *buffer << "gte "; break;
+		case Tokentype::Or:
+		case Tokentype::Xor:
+		case Tokentype::And: throw std::logic_error("Not implemented");
+		case Tokentype::LShift: *buffer << "2 swap pow mul "; break;
+		case Tokentype::RShift: *buffer << "2 swap pow div "; break;
+		case Tokentype::Sub: *buffer << "sub "; break;
+		case Tokentype::Mul: *buffer << "mul "; break;
+		case Tokentype::Pow: *buffer << "pow "; break;
+		case Tokentype::Div: *buffer << "div "; break;
+		case Tokentype::Mod: *buffer << "mod "; break;
+		case Tokentype::Add: {
+			auto l = stack.top();
+			stack.pop();
+			auto r = stack.top();
+			stack.pop();
+			if((l != unknown && l & Types::String) || (r != unknown && r & Types::String)) {
+				*buffer << "concat ";
+				Logger::Log(Warning, node.Location, "Use template strings instead of addition");
+				stack.push(Types::String);
+			} else {
+				*buffer << "add ";
+				stack.push(Types::Number);
+			}
+			return;
+		}
+		case Tokentype::LBracket:
+			if(!dynamic_cast<Variable*>(node.Left)) {
+				Logger::Log(Error, node.Left->Location, "Left side of array select has to be Variable");
+			}
+			*buffer << "GetListElement ";
+			if(stack.top() & Types::List == 0) {
+				Logger::Log(Warning, node.Left->Location, "Left side of array select has to be list");
+			}
+			stack.pop();
+			if(stack.top() & Types::Int == 0) {
+				Logger::Log(Warning, node.Right->Location, "Index of array select has to be integer");
+			}
+			stack.pop();
+			stack.push(Types::unknown);
+			return;
+		default: throw std::logic_error("Not reachable");
+	}
+	if(stack.top() & Types::Int == 0) {
+		Logger::Log(Warning, node.Left->Location, "Left side of operation has to be number");
+	}
+	stack.pop();
+	if(stack.top() & Types::Int == 0) {
+		Logger::Log(Warning, node.Left->Location, "Right side of operation has to be number");
+	}
+	stack.pop();
+	stack.push(Types::Number);
+}
+
+void Converter::visit(const FunctionCall& node, bool discard) {
+	auto var = dynamic_cast<Variable*>(node.Left);
+	if(!var) {
+		Logger::Log(Error, node.Location, "Left side of function call has to be function name");
+		return;
+	}
+
+	auto func = findFunc(var->Name);
+	if(func) { 
+		*buffer << "@" << var->Name << '(';
+	} else if(nativeVars.count(var->Name)) {
+		*buffer << var->Name << '(';
+	}
+
+	const size_t stackStart = stack.size();
+	for(auto&& param : node.Params) {
+		visit(param, false);
+	}
+	size_t count = stack.size() - stackStart;
+	*buffer << ") ";
+
+	if(func) {
+		if(count < func->Params.size()) {
+			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+		} else if(count > func->Params.size()) {
+			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+		}
+		// TODO: better type checking
+		while (count > 0) { 
+			stack.pop(); 
+			count--; 
+		}
+
+		if(discard && func->ReturnTypes.size() != 0) {
+			Logger::Log(Warning, node.Location, "Discarding function result");
+			*buffer << "ClearStack ";
+		} else {
+			for(int i = 0; i < func->ReturnTypes.size(); i++) {
+				stack.push(func->ReturnTypes[i]);
+			}
+		}
+	} else if(nativeVars.count(var->Name)) {
+		auto& func = nativeVars[var->Name];
+		if(count < func.consumes.size()) {
+			Logger::Log(Error, var->Location, "Missing arguments for function \"" + var->Name + '"');
+		} else if(count > func.consumes.size()) {
+			Logger::Log(Error, var->Location, "Too many arguments for function \"" + var->Name + '"');
+		} else {
+			// Check of elements on stack are of correct type
+			for(int i = func.consumes.size() - 1; i >= 0; i--) {
+				const auto expected = func.consumes[i];
+				const auto actual = stack.top();
+				stack.pop();
+
+				if(!(actual & expected)) {
+					Logger::Log(Warning, node.Location, "parameter type might be wrong");
+				}
+			}
+		}
+
+		if(discard && !func.returns.empty()) {
+			*buffer << "ClearStack ";
+		} else {
+			if(var->Name == "GetUnitsInRange" || 
+			   var->Name == "GetEnemyUnitsInRange" || 
+			   var->Name == "GetAllUnitsInRange" || 
+			   var->Name == "GetCoresWithVar") {
+				// fucked up shit because of unknown return count
+				*buffer << "CreateList swap 0 do swap dup2 AppendToList pop loop ";
+				stack.push(Types::List);
+			} else {
+				for(const auto t : func.returns) {
+					stack.push(t);
+				}
+			}
+		}
+	} else {
+		Logger::Log(Error, var->Location, "Unknown function \"" + var->Name + '"');
+		while(stack.size() - stackStart > 0) { stack.pop(); }
+	}
+}
+
+void Converter::visit(const IntLit& node, bool discard) {
+	if(!discard) {
+		*buffer << node.Value << " ";
+		stack.push(Types::Int);
+	}
+}
+
+void Converter::visit(const FloatLit& node, bool discard) {
+	if(!discard) {
+		*buffer << node.Value;
+		if(fmod(node.Value, 1) == 0) {
+			*buffer << ".0 ";
+		} else {
+			*buffer << " ";
+		}
+		stack.push(Types::Float);
+	}
+}
+
+void Converter::visit(const StringLit& node, bool discard) {
+	if(!discard) {
+		*buffer << '\"' << node.Value << "\" ";
+		stack.push(Types::String);
+	}
+}
+
+void Converter::visit(const BoolLit& node, bool discard) {
+	if(!discard) {
+		*buffer << (node.Value ? "TRUE " : "FALSE ");
+		stack.push(Types::Boolean);
+	}
+}
+
+void Converter::visit(const ArrayLit& node, bool discard) {
+	if(discard) {
+		for(const auto element : node.Elements) {
+			visit(element, true);
+		}
+	} else {
+		const size_t startStack = stack.size();
+		*buffer << "CreateList ";
+
+		for(auto element : node.Elements) {
+			*buffer << "dup ";
+			visit(element, false);
+			if(stack.size() - startStack == 0) {
+				Logger::Log(Error, element->Location, "array element returns no elements");
+			} else if(stack.size() - startStack > 1) {
+				Logger::Log(Error, element->Location, "array element returns multiple elements");
+			}
+			*buffer << "AppendToList ";
+			while(stack.size() > startStack) {
+				stack.pop();
+			}
+		}
+
+		stack.push(Types::List);
+	}
+}
+
+void Converter::visit(const Variable& node, bool discard) {
+	auto v = findVar(node.Name);
+	if(v) {
+		if(!discard) {
+			*buffer << "<-" << v->Codename << ' ';
+			// stack.push(v->Typename);
+			stack.push(Types::unknown);
+		}
+	} else {
+		if(nativeVars.count(node.Name)) {
+			// TODO: if (function is const && discard) the call can be skipped
+			auto var = nativeVars[node.Name];
+			*buffer << node.Name << " ";
+			if(!var.consumes.empty()) {
+				Logger::Log(Error, node.Location, node.Name + " is a function and not a variable");
+			}
+			// Push all returns onto the stack
+			for(const auto t : var.returns) {
+				stack.push(t);
+			}
+
+			if(discard) {
+				for(int i = 0; i < var.returns.size(); i++) {
+					*buffer << "pop ";
+					stack.pop();
+				}
+			}
+		} else {
+			Logger::Log(Error, node.Location, "Undefined variable " + node.Name);
+			stack.push(Types::unknown);
+		}
+	}
+}
+
+std::string Converter::Convert(const std::vector<Statement*>& ast, const std::string& fileName) {
+	std::ostringstream buf;
+	buffer = &buf;
+
 	FunctionDecl* main = nullptr;
 	int count = 0;
 
+	// script vars
 	for(auto node : ast) {
-		if(auto func = dynamic_cast<FunctionDecl*>(node)) {
-			if(func->Name == "main") {
-				main = func;
-				continue;
-			}
-			auto count = CountReturn(func->Body);
-			if(count == -1) {
-				count = 0;
-			}
-			func->ReturnCount = count;
-
-			if(nativeVars.count(func->Name)) {
-				Logger::Log(Error, node->Location, "Native function with same name already exists");
-			}
-			if(cnvrt.functions.count(func->Name)) {
-				Logger::Log(Error, node->Location, "function \"" + func->Name + "\" exists multiple times");
-			}
-			cnvrt.functions[func->Name] = func;
-			continue;
-		}
 		if(auto var = dynamic_cast<LetStatement*>(node)) {
 			if(var->TokenType == Tokentype::Const) {
+				
 				for(LetItem& item : var->Items) {
 					if(item.Names.size() != 1) {
 						Logger::Log(Error, item.Location, "Cannot have multi declaration for input variables");
 					}
 
-
 					auto name = item.Names[0];
-					cnvrt.buffer << '$' << name << ':';
+					*buffer << '$' << name << ':';
 
 					// TODO: do better const eval
 					if(dynamic_cast<IntLit*>(item.Value) || dynamic_cast<FloatLit*>(item.Value) || dynamic_cast<StringLit*>(item.Value) || dynamic_cast<BoolLit*>(item.Value)) {
-						cnvrt.visit(item.Value, false);
+						visit(item.Value, false);
+						stack.pop();
 					} else if(const auto op = dynamic_cast<PreExpression*>(item.Value)) {
 						if(op->Type == Tokentype::Sub && (dynamic_cast<IntLit*>(op->Right) || dynamic_cast<FloatLit*>(op->Right))) {
-							cnvrt.buffer << "-";
-							cnvrt.visit(op->Right, false);
+							*buffer << "-";
+							visit(op->Right, false);
+							stack.pop();
 						} else {
 							Logger::Log(Error, var->Location, "Right site of input variable has to be simple constant");
-							cnvrt.stack.push(Types::unknown);
 						}
 					} else {
 						Logger::Log(Error, var->Location, "Right site of input variable has to be simple constant");
-						cnvrt.stack.push(Types::unknown);
 					}
 
-					cnvrt.newLine();
-					cnvrt.scopes[0][name] = ScopeItem{ name, cnvrt.stack.top(), Tokentype::Const };
-					cnvrt.stack.pop();
+					newLine();
+					scopes[0].variables[name] = ScopeItem{ name, Tokentype::Const };
 				}
+
+				continue;
 			}
+		}
+		if(auto func = dynamic_cast<FunctionDecl*>(node)) {
+			if(func->Name == "main") {
+				main = func;
+			} else {
+				scopes[0].functions[func->Name] = func;
+			}
+			continue;
 		}
 		count++;
 	}
 
-	if(!main) {
-		Logger::Log(Error, fileName, "No main function found");
-	}
-
+	*buffer << '\n';
+	
+	// once
 	if(count != 0) {
-		cnvrt.buffer << "once";
-		cnvrt.depth = 1;
-		cnvrt.newLine();
+		*buffer << "once";
+		depth = 1;
+		newLine();
 
-		for(auto node : ast) {
+		bool first = true;
+		for(int i = 0; i < ast.size(); ++i) {
+			auto node = ast[i];
+
 			if(dynamic_cast<FunctionDecl*>(node)) {
 				continue;
 			}
@@ -990,22 +1268,33 @@ std::string crpl(const std::vector<AstNode*>& ast, const std::string& fileName) 
 					continue;
 				}
 			}
-			cnvrt.visit(node, true);
+			if(!first) {
+				newLine();
+			}
+			first = false;
+			visit(node, true);
 		}
-		cnvrt.depth = 0;
-		cnvrt.newLine();
-		cnvrt.buffer << "endonce\n\n";
+		depth = 0;
+		newLine();
+		*buffer << "endonce\n\n";
 	}
 
-	cnvrt.visit(main->Body, true);
+	// main
+	if(!main) {
+		Logger::Log(Warning, fileName, "No main function found");
+	} else {
+		visit(main->Body, true);
+	}
 
+	// functions
 	for(auto node : ast) {
-		auto func = dynamic_cast<FunctionDecl*>(node);
-		if(!func || func->Name == "main") {
-			continue;
+		if(auto func = dynamic_cast<FunctionDecl*>(node)) {
+			if(func->Name == "main") { continue; }
+			depth = 0;
+			visit(node, true);
 		}
-		cnvrt.visitFunctionDecl(*func);
 	}
 
-	return cnvrt.buffer.str();
+	buf << "\n" << functionBuffer.str();
+	return buf.str();
 }

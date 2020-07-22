@@ -7,7 +7,7 @@ arrayLit  := '[' (expr (',' expr)*)? ']'
 statement := return | for | while | doWhile | if | scope | varDecl | functionDecl | expr
 
 return  := 'return' (expr (',' expr)*)?;
-for 	:= 'for' '(' expr? ';' expr? ';' expr? ')' statement
+for 	:= 'for' '(' (((expr | varDecl)? ';' expr? ';' expr?) | (('const' | 'let' | 'var') ID 'of' expr)) ')' statement
 while	:= 'while' '(' expr ')' statement
 doWhile	:= 'do' statement 'while' '(' expr ')'
 if		:= 'if' '(' expr ')' statement ('else' statement)?

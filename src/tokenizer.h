@@ -20,6 +20,8 @@ enum class Tokentype {
     For,       // for
     Do,        // do
     While,     // while
+    Of,        // of
+    In,        // in
     If,        // if
     Else,      // else
     Switch,    // switch

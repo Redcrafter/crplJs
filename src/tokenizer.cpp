@@ -18,16 +18,18 @@ static bool isDigit(int c) {
     return c >= '0' && c <= '9';
 }
 
-std::map<std::string, Tokentype> keywords = {
+static std::map<std::string, Tokentype> keywords = {
     {"true", Tokentype::BoolLit},
 	{"false", Tokentype::BoolLit},
     {"let", Tokentype::Let},
     {"var", Tokentype::Var},
     {"const", Tokentype::Const},
     {"return", Tokentype::Return},
-    {"for", Tokentype::Return},
+    {"for", Tokentype::For},
     {"do", Tokentype::Do},
     {"while", Tokentype::While},
+    {"of", Tokentype::Of},
+    {"in", Tokentype::In},
     {"if", Tokentype::If},
     {"else", Tokentype::Else},
     {"switch", Tokentype::Switch},
@@ -226,7 +228,6 @@ std::vector<Token> tokenize(const std::string& fileName) {
 					jesus();
         			continue;
         		} else {
-					take();
 					type = Tokentype::RBrace; take();
         		}
 				break;
@@ -470,12 +471,15 @@ std::vector<Token> tokenize(const std::string& fileName) {
                     }
                 } else {
                 	Logger::Log(Error, loc, "Unexpected character \"" + std::string(1, currentChar) + "\" at (" + std::to_string(loc.line) + "," + std::to_string(loc.column) + ")");
+					type = Tokentype::Semicolon;
                 }
                 break;
         }
 
         tokens.push_back(Token{type, spelling, start});
     }
+
+	tokens.push_back(Token{ Tokentype::Eof, "<EOF>", loc });
 
     return tokens;
 }

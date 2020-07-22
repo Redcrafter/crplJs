@@ -1,5 +1,6 @@
-///<reference path="./crpl.d.ts" />
+///<reference path="../crpl.d.ts" />
 
+// Creeper amount and anticreeper amount are stored in separate variables so you can have it produce different amounts of each.
 const Camt = 30;
 const ACamt = -30;
 // Timers are also stored separately
@@ -8,14 +9,12 @@ const Cinterval = 30;
 const Startdelay = 0;
 // StartState of 1 means the emitter will produce creeper initially. Value of 0 will create AC
 const startState = 1;
-const Name = "FlipEmitter";
 // Thresh is how much creeper/AC must flood the emitter in order for it to flip
 const Thresh = 1.0;
-// ImageSlot can be changed if you want to use a different slot.
-const ImageSlot = "Custom0";
-const Empowerment = 1;
-const EmpowermentAC = 1;
-const Unstopped = 1;
+
+let Empowerment = 1;
+let EmpowermentAC = 1;
+let Unstopped = 1;
 
 let Cvar = 1;
 let ACvar = 1;
@@ -25,8 +24,8 @@ awake();
 delay(4);
 let tAmount = ACamt;
 let TotalPower = 1;
+let NegaPower = 1;
 let EmissionBonus = 0;
-let NegaPower = 0; // ?
 let multi = false;
 
 function main() {
@@ -80,20 +79,13 @@ function main() {
 }
 
 function awake() {
-    SetUnitAttribute(Self, CONST_COUNTSFORVICTORY, 0);
-    SetUnitAttribute(Self, CONST_NULLIFIERDAMAGES, 0);
-    SetUnitAttribute(Self, CONST_SUPPORTSDIGITALIS, 0);
-
-    SetImage(Self, "main", ImageSlot);
-    SetImageScale(Self, "main", 0.8, 0.8);
     SetImageColor(Self, "main", 150, 150, 150, 255);
 
     if (GetScriptVar(Self, "EmitterInterface.crpl", "HasEmitterInterface") == 0) {
         AddScriptToUnit(Self, "EmitterInterface.crpl");
     }
 
-    SetScriptVar(Self, "EmitterInterface.crpl", "EmitterType", Name);
-    SetScriptVar(Self, "EmitterInterface.crpl", "EmitterNetName", 0);
+    SetScriptVar(Self, "EmitterInterface.crpl", "EmitterType", "FlipEmitter");
 }
 
 function CProd() {
